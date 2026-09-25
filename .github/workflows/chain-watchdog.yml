@@ -11,7 +11,7 @@ on:
 
 permissions:
   actions: write        # ยกเลิก run + dispatch
-  contents: read        # อ่าน data/chain_state.json
+  contents: write       # อ่าน state + ปลด state ที่ค้าง (โซ่ถูกยกเลิกจะทิ้ง state ว่า "ยังมีโซ่")
 
 concurrency:
   group: wxedge-watchdog

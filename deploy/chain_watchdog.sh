@@ -52,6 +52,27 @@ for id in $runs; do
 done
 
 [ -n "$runs" ] && sleep 10
+# ── ปลด state ที่ค้าง: โซ่ที่ถูกยกเลิกทิ้ง state ว่า "ยังมีโซ่ถึง ..." ไว้ → โซ่ใหม่จะออกทันทีจาก guard ──
+if [ "$DRY" = "1" ]; then
+  echo "  (dry) จะปลด state (ตั้ง ends_at/beat_at เป็น 1 ชม.ที่แล้ว)"
+else
+  sha=$(curl -s -H "Authorization: Bearer $TOK" -H "User-Agent: wxedge-watchdog" \
+          "https://api.github.com/repos/$REPO/contents/data/chain_state.json" \
+        | python3 -c "import sys,json;print(json.load(sys.stdin).get('sha',''))")
+  if [ -n "$sha" ]; then
+    body=$(python3 - "$sha" <<'PY2'
+import base64, json, sys, datetime as dt
+old = (dt.datetime.now(dt.timezone.utc) - dt.timedelta(hours=1)).strftime("%Y-%m-%dT%H:%M:%SZ")
+print(json.dumps({"message": "chain: watchdog ปลด state ที่ค้าง [skip ci]", "sha": sys.argv[1],
+                  "content": base64.b64encode(json.dumps({"ends_at": old, "beat_at": old}, indent=1).encode()).decode()}))
+PY2
+)
+    code=$(curl -s -o /dev/null -w "%{http_code}" -X PUT -H "Authorization: Bearer $TOK" \
+            -H "User-Agent: wxedge-watchdog" -H "Accept: application/vnd.github+json" \
+            -d "$body" "https://api.github.com/repos/$REPO/contents/data/chain_state.json")
+    echo "  ปลด state → HTTP $code"
+  fi
+fi
 if [ "$DRY" = "1" ]; then
   echo "  (dry) จะ dispatch โซ่ใหม่"
 else
