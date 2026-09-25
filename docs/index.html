@@ -129,12 +129,12 @@ footer{border-top:1px solid var(--line);margin-top:40px;padding:18px 0 calc(24px
 <div class="card"><h3>ไม้จริงที่ต้องเก็บ (เป้า 50)</h3>
 <div class="barwrap"><div class="barlabel"><span>settled แล้ว</span><span class="bnum">0 / 50</span></div><div class="track" role="progressbar" aria-label="settled แล้ว" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"><div class="fill " style="width:0.0%"></div></div><div class="bartarget">เป้า: settle แล้วนับอัตโนมัติจาก forward_resolve.py</div></div>
 <div class="barwrap"><div class="barlabel"><span>อัตราชนะจริง</span><span class="bnum">ยังไม่มีไม้ settled</span></div><div class="track" role="progressbar" aria-label="อัตราชนะจริง" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"><div class="fill warn" style="width:0.0%"></div></div><div class="bartarget">เป้า: ต้อง ≥ 85% ตอนครบ 50 ไม้</div></div>
-<div class="barwrap"><div class="barlabel"><span>ข้อมูลดิบที่เก็บได้</span><span class="bnum">223 snapshot (เมือง×รอบ)</span></div><div class="track" role="progressbar" aria-label="ข้อมูลดิบที่เก็บได้" aria-valuenow="100" aria-valuemin="0" aria-valuemax="100"><div class="fill " style="width:100.0%"></div></div><div class="bartarget">เป้า: เป้า 200 = 33 เมือง × ~2 วันครึ่ง</div></div>
+<div class="barwrap"><div class="barlabel"><span>ข้อมูลดิบที่เก็บได้</span><span class="bnum">232 snapshot (เมือง×รอบ)</span></div><div class="track" role="progressbar" aria-label="ข้อมูลดิบที่เก็บได้" aria-valuenow="100" aria-valuemin="0" aria-valuemax="100"><div class="fill " style="width:100.0%"></div></div><div class="bartarget">เป้า: เป้า 200 = 33 เมือง × ~2 วันครึ่ง</div></div>
 </div>
 <div class="card"><h3>สถานะ pipeline</h3>
 <p class="sub">รอบถัดไป: <strong id="nextRun">—</strong></p>
-<p class="sub">log เริ่มเก็บ: <time datetime="2026-09-25T20:00:03Z">—</time></p>
-<p class="sub">สร้างหน้านี้: <time datetime="2026-09-25T20:00:03Z">2026-09-25T20:00:03Z</time></p>
+<p class="sub">log เริ่มเก็บ: <time datetime="2026-09-25T20:05:02Z">—</time></p>
+<p class="sub">สร้างหน้านี้: <time datetime="2026-09-25T20:05:02Z">2026-09-25T20:05:02Z</time></p>
 <p class="sub" id="live" aria-live="polite">ข้อมูลฝังในหน้า ณ เวลาที่สร้าง — กด “โหลดใหม่” เพื่อดึงล่าสุด</p>
 </div></div></section>
 <section id="kpi" aria-labelledby="kpiH"><h2 id="kpiH">KPI หลัก</h2><div class="grid kpis">
@@ -150,7 +150,7 @@ footer{border-top:1px solid var(--line);margin-top:40px;padding:18px 0 calc(24px
 ระบบเก็บข้อมูลทุก 30 นาทีแล้ว — ไม้จะปรากฏที่นี่เมื่อมี bin ที่ราคา ≤ 0.25 · p โมเดล ≥ 0.90 · edge ≥ 0.15 · spread ≤ 0.04 (หรือฝั่ง NO: bin ที่พิสูจน์แล้วว่าเป็นไปไม่ได้) และจะได้ “เฉลย” หลังตลาดปิดในเช้าวันถัดไป</div>
 <h3 style="margin-top:16px">ความครอบคลุมของข้อมูลที่เก็บ</h3>
 <div class="tblwrap"><table><caption>snapshot การแจกแจง + ราคาทุก bin (ใช้ทำ calibration/PIT)</caption><thead><tr><th scope="col">วัน</th><th scope="col">เมือง×รอบ</th></tr></thead><tbody>
-<tr><td><time datetime="2026-09-25T00:00:00Z" data-dateonly="1">2026-09-25</time></td><td>223</td></tr>
+<tr><td><time datetime="2026-09-25T00:00:00Z" data-dateonly="1">2026-09-25</time></td><td>232</td></tr>
 </tbody></table></div>
 </section>
 <section id="backtest" aria-labelledby="btH"><h2 id="btH">Backtest — หลักฐาน 379 ไม้</h2>
@@ -172,7 +172,7 @@ footer{border-top:1px solid var(--line);margin-top:40px;padding:18px 0 calc(24px
 <div class="card"><h3>แหล่งพยากรณ์</h3><div class="kpi">11</div><div class="sub">รวมแบบ median_after_per_model_bias (หัก bias ต่อโมเดลก่อน)</div>
 <div class="sub" style="margin-top:8px">ecmwf_ifs025, gfs_seamless, icon_seamless, gem_seamless, meteofrance_seamless, jma_seamless, ukmo_seamless, ecmwf_aifs025_single, best_match, ncep_nbm_conus, ncep_hrrr_conus</div></div>
 <div class="card"><h3>ความแม่นที่วัดได้</h3><div class="kpi">σ 1.219°C</div><div class="sub">MAE 0.856°C · σ 0.996°F · MAE 0.773°F</div><div class="sub">ใช้ป้อนการแจกแจงความน่าจะเป็นต่อ bin</div></div>
-<div class="card"><h3>จักรวาลที่ใช้จริง</h3><div class="kpi">33 เมือง</div><div class="sub">เกณฑ์: obs ตกใน bin ที่ตลาดตัดสิน ≥ 90% (จากข้อมูลจริง · อัปเดต <time datetime="2026-09-25T20:00:00Z">2026-09-25</time>)</div></div>
+<div class="card"><h3>จักรวาลที่ใช้จริง</h3><div class="kpi">33 เมือง</div><div class="sub">เกณฑ์: obs ตกใน bin ที่ตลาดตัดสิน ≥ 90% (จากข้อมูลจริง · อัปเดต <time datetime="2026-09-25T20:05:01Z">2026-09-25</time>)</div></div>
 </div>
 <h3 style="margin-top:16px">agreement รายเมือง (ยิ่งสูง = obs ของเราตรงกับแหล่งตัดสินของตลาด)</h3>
 <ul class="chips" aria-label="เมืองที่ใช้และค่า agreement">
@@ -270,7 +270,7 @@ footer{border-top:1px solid var(--line);margin-top:40px;padding:18px 0 calc(24px
 <section id="pipeline" aria-labelledby="plH"><h2 id="plH">รอบงานอัตโนมัติ</h2><div class="tblwrap"><table><caption>ตารางที่ตั้งไว้บน GitHub Actions (UTC) — ทุกอย่าง commit กลับเข้า repo เอง</caption><thead><tr><th scope="col">เวลา</th><th scope="col">ทำอะไร</th><th scope="col">ได้อะไร</th></tr></thead><tbody><tr><td>ทุก 30 นาที (:00, :30 UTC)</td><td>เช็คว่ามีเมืองถึงเวลาตัดสินใจไหม → สแกนเฉพาะเมืองนั้น</td><td>bid/ask + depth + obs + σ + snapshot</td></tr><tr><td>ทุกวัน 03:20 UTC</td><td>อัปเดตจักรวาล · วัดช่องว่าง bid/ask · เติมเฉลย</td><td>hit rate/EV/Brier จริง + รายงาน</td></tr><tr><td>ทุกครั้งที่ push</td><td>รันชุดทดสอบ 20 ข้อ</td><td>กันโค้ดพังเงียบ ๆ</td></tr></tbody></table></div>
 <p class="sub">นาที CI ที่ใช้ ~1,400–1,700/เดือน — อยู่ในโควตาฟรีของ repo ส่วนตัว (2,000 นาที)</p>
 </section>
-</main><footer><p>หน้านี้สร้างอัตโนมัติจาก <code>build_monitor.py</code> · โหมด full · สร้างเมื่อ <time datetime="2026-09-25T20:00:03Z">2026-09-25T20:00:03Z</time></p><p>ตัวเลขทั้งหมดคำนวณสดจาก data/ ในขณะสร้าง (ไม่ใส่ค่าคงที่) · backtest ใช้ราคาซื้อขายล่าสุดจากประวัติตลาด · ผลจริงจะมาจาก forward-test เท่านั้น</p><p>ไม่ใช่คำแนะนำการลงทุน · ตลาดพยากรณ์อากาศมีความเสี่ยงสภาพคล่อง/การตัดสิน · ตรวจ ToS และภูมิภาคก่อนใช้เงินจริง</p></footer></div>
+</main><footer><p>หน้านี้สร้างอัตโนมัติจาก <code>build_monitor.py</code> · โหมด full · สร้างเมื่อ <time datetime="2026-09-25T20:05:02Z">2026-09-25T20:05:02Z</time></p><p>ตัวเลขทั้งหมดคำนวณสดจาก data/ ในขณะสร้าง (ไม่ใส่ค่าคงที่) · backtest ใช้ราคาซื้อขายล่าสุดจากประวัติตลาด · ผลจริงจะมาจาก forward-test เท่านั้น</p><p>ไม่ใช่คำแนะนำการลงทุน · ตลาดพยากรณ์อากาศมีความเสี่ยงสภาพคล่อง/การตัดสิน · ตรวจ ToS และภูมิภาคก่อนใช้เงินจริง</p></footer></div>
 <script>
 (function(){
  try{
