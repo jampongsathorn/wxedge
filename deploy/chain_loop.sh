@@ -57,15 +57,29 @@ PY
 git_pull_push() {
   [ "$PUSH" = "1" ] && [ -d .git ] || return 0
   git add -f data reports docs 2>/dev/null || true
-  git diff --cached --quiet && { log "ไม่มีข้อมูลใหม่"; return 0; }
+  git diff --cached --quiet && { log "ไม่มีข้อมูลใหม่"; PUSH_FAIL=0; return 0; }
   git -c user.name=wxedge-bot -c user.email=wxedge-bot@users.noreply.github.com \
       commit -q -m "forward-test log $(now_iso) [skip ci]" || return 0
   for i in 1 2 3; do
-    git pull --rebase -q origin main 2>/dev/null || true
-    git push -q origin main 2>/dev/null && { log "push แล้ว (ครั้งที่ $i)"; return 0; }
+    # เคลียร์สถานะ rebase/merge ที่อาจค้างจากรอบก่อน (สาเหตุ: มี commit ใหม่เข้ามาชนกัน)
+    git rebase --abort >/dev/null 2>&1 || true
+    git merge  --abort >/dev/null 2>&1 || true
+    git fetch -q origin main 2>/dev/null || { sleep 5; continue; }
+    # ชนกันเมื่อไรให้ยึดข้อมูลฝั่งเรา (ข้อมูลเราสดกว่าเสมอ: snapshot/รายงานที่เพิ่งสร้าง)
+    if ! git -c user.name=wxedge-bot -c user.email=wxedge-bot@users.noreply.github.com \
+         merge -q --no-edit -X ours origin/main >/dev/null 2>&1; then
+      git rebase --abort >/dev/null 2>&1 || true
+      git merge  --abort >/dev/null 2>&1 || true
+      git checkout --ours -q -- data docs reports 2>/dev/null || true
+      git add -A 2>/dev/null || true
+      git -c user.name=wxedge-bot -c user.email=wxedge-bot@users.noreply.github.com \
+          commit -q -m "chain: merge (ours) $(now_iso) [skip ci]" >/dev/null 2>&1 || true
+    fi
+    git push -q origin main 2>/dev/null && { log "push แล้ว (ครั้งที่ $i)"; PUSH_FAIL=0; return 0; }
     sleep 5
   done
-  log "⚠ push ไม่สำเร็จ 3 ครั้ง — ข้อมูลยังอยู่ในเครื่อง runner"
+  PUSH_FAIL=$(( PUSH_FAIL + 1 ))
+  log "⚠ push ไม่สำเร็จ (ต่อเนื่อง $PUSH_FAIL รอบ) — ข้อมูลยังอยู่ในเครื่อง runner"
 }
 
 write_state
@@ -77,16 +91,16 @@ if [ "$PUSH" = "1" ] && [ -d .git ]; then
 fi
 log "เริ่มโซ่ · จะวนถึง $(date -u -d "@$END" +%Y-%m-%dT%H:%MZ) · ทุก $INTERVAL_MIN นาที · workers $WORKERS"
 
-rounds=0; scans=0; empty=0
+rounds=0; scans=0; empty=0; PUSH_FAIL=0
 while [ "$(now_epoch)" -lt "$END" ]; do
   # ── งานรายวัน (03:20–03:39 UTC) ──
   H=$(date -u +%-H); M=$(date -u +%-M)
   if [ "$H" = "3" ] && [ "$M" -ge 20 ] && [ "$M" -lt 40 ]; then
     if [ ! -f data/.daily_done_$(date -u +%F) ]; then
       log "── งานรายวัน: จักรวาล + bid/ask + เติมเฉลย ──"
-      $PY -c "import cheap_live as C; C.build_universe(verbose=True)" || true
-      $PY bidask_check.py --max-bins 90 || true
-      $PY forward_resolve.py || true
+      timeout 900 $PY -c "import cheap_live as C; C.build_universe(verbose=True)" || true
+      timeout 600 $PY bidask_check.py --max-bins 90 || true
+      timeout 600 $PY forward_resolve.py || true
       touch data/.daily_done_$(date -u +%F)
     fi
   fi
@@ -99,17 +113,21 @@ while [ "$(now_epoch)" -lt "$END" ]; do
   if [ "$RUN" = "true" ]; then
     rounds=$((rounds + 1)); scans=$((scans + $(echo "$CITIES" | tr ',' '\n' | grep -c .)))
     log "รอบที่ $rounds · โหมด $MODE · $CITIES"
-    $PY cheap_live.py --log --workers "$WORKERS" --cities "$CITIES" 2>&1 | tail -3
+    timeout 900 $PY cheap_live.py --log --workers "$WORKERS" --cities "$CITIES" 2>&1 | tail -3
     # หน้า monitor อัปเดตเมื่อ KPI เปลี่ยน (log/จักรวาล/bid-ask/เฉลย/รายงาน) — snapshot เปล่า ๆ ไม่ต้อง rebuild Pages
     git add -f data/cheap_live_log.csv data/universe.json data/bidask_probe.json data/forward_stats.json reports 2>/dev/null || true
     if ! git diff --cached --quiet; then
-      $PY build_monitor.py --quiet --mode "${MODE_MONITOR:-full}" --skip-if-same --out docs/index.html --json-out docs/monitor.json || true
+      timeout 300 $PY build_monitor.py --quiet --mode "${MODE_MONITOR:-full}" --skip-if-same --out docs/index.html --json-out docs/monitor.json || true
     fi
   else
     empty=$((empty + 1))
   fi
   write_state
   git_pull_push
+  if [ "$PUSH_FAIL" -ge 3 ]; then
+    log "หยุดโซ่: push ไม่ติดต่อกัน 3 รอบ → ปล่อยให้โซ่ใหม่ (cron สำรอง/watchdog) เริ่มแทน"
+    break
+  fi
 
   # ── นอนให้ตรงรอบถัดไป (นาทีที่หารด้วย INTERVAL_min ลงตัว) ──
   cur=$(date -u +%s); mod=$(( $(date -u +%-M) % INTERVAL_MIN ))

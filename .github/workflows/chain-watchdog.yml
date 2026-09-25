@@ -1,0 +1,30 @@
+# wxedge-chain-watchdog — เฝ้าโซ่เก็บข้อมูล: ถ้า heartbeat ค้างเกิน 25 นาที ให้ยกเลิก run ที่ค้าง + เริ่มโซ่ใหม่
+#
+# ทำไมต้องมี: ถ้าโซ่ค้าง (เช่น git rebase ชนกับ commit ที่ push เข้ามา) มันจะถือ concurrency lock ไว้
+#            ทำให้ cron สำรอง */30 ต่อคิวไม่ได้ → ข้อมูลหยุดเก็บเงียบ ๆ งานนี้คือตัวปลดล็อกอัตโนมัติ
+name: wxedge-chain-watchdog
+
+on:
+  schedule:
+    - cron: "*/30 * * * *"
+  workflow_dispatch:
+
+permissions:
+  actions: write        # ยกเลิก run + dispatch
+  contents: read        # อ่าน data/chain_state.json
+
+concurrency:
+  group: wxedge-watchdog
+  cancel-in-progress: false
+
+jobs:
+  watchdog:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: ตรวจ heartbeat → รีสตาร์ตโซ่ที่ค้าง
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: bash deploy/chain_watchdog.sh
