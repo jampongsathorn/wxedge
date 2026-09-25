@@ -17,6 +17,9 @@ cheap_live.py v2 — ใช้จริงตาม "กลยุทธ์ฉบ
   python3 cheap_live.py --log                # บันทึกคำแนะนำ + snapshot ลง data/ (v3: bid/ask จริง · depth · สถานะ obs · token id · เฉลย)
   python3 cheap_live.py --log --hour-window 15-17   # โหมด cron: สแกนเฉพาะเมืองที่ใกล้เวลาเข้าไม้
   python3 cheap_live.py --no-universe-filter # ปิดตัวกรองเมือง (ไม่แนะนำ)
+  python3 cheap_live.py --workers 4 --cities a,b,c   # สแกนขนาน (CI ใช้ให้รอบเร็วขึ้น)
+
+หมายเหตุ: การสแกนขนานยังเคารพ rate limit ต่อ host ใน wxedge.py (IEM เว้น 2 วิ/คำขอ)
 """
 import argparse, collections, csv, json, math, os, re, statistics as _st, sys
 from datetime import datetime, timedelta, timezone
@@ -277,6 +280,8 @@ def main():
     ap.add_argument("--force-log", action="store_true",
                     help="บันทึกทับได้แม้ซ้ำ (ค่าเริ่มต้น: กันซ้ำด้วย city+target+hour+side+bin) — "
                          "สำคัญเมื่อรันเป็น cron ทุกชั่วโมง เพราะอยากได้ 'ราคาแรก' ของชั่วโมงนั้น")
+    ap.add_argument("--workers", type=int, default=1,
+                    help="สแกนหลายเมืองพร้อมกัน (ค่าเริ่มต้น 1 = เรียงลำดับ · ใช้ 3-4 ใน CI ให้รอบเร็วขึ้น)")
     ap.add_argument("--no-universe-filter", action="store_true",
                     help="ปิดตัวกรองจักรวาลเมือง (ค่าเริ่มต้น: เฉพาะเมืองที่ obs ตรงกับ bin ที่ตลาดตัดสิน)")
     a = ap.parse_args()
@@ -310,12 +315,20 @@ def main():
                 print("⚠ ข้ามเมืองที่ obs ไม่ตรงกับแหล่งตัดสินของตลาด: %s" % ", ".join(skipped))
             cities = [c for c in cities if c in UNIV]
 
-    res = []
-    for c in cities:
-        r = scan_city(c, cfgs[c], a.hour or datetime.now(ZoneInfo(cfgs[c]["tz"])).hour,
-                      a.pmax, a.min_edge, a.pmin, a.day or None,
-                      max_spread=a.max_spread, min_size=a.min_size, want_depth=a.log)
-        res.append(r)
+    def _scan(c):
+        try:
+            return scan_city(c, cfgs[c], a.hour or datetime.now(ZoneInfo(cfgs[c]["tz"])).hour,
+                             a.pmax, a.min_edge, a.pmin, a.day or None,
+                             max_spread=a.max_spread, min_size=a.min_size, want_depth=a.log)
+        except Exception as e:                       # เมืองเดียวล้ม ต้องไม่ล้มทั้งรอบ (เช่น IEM ตอบ 429)
+            return {"city": c, "error": "สแกนไม่สำเร็จ: %s" % str(e)[:120]}
+
+    if a.workers > 1 and len(cities) > 1:
+        from concurrent.futures import ThreadPoolExecutor
+        with ThreadPoolExecutor(max_workers=a.workers) as ex:
+            res = list(ex.map(_scan, cities))          # คงลำดับเดิม (map เรียงตามอินพุต)
+    else:
+        res = [_scan(c) for c in cities]
 
     if a.json:
         print(json.dumps(res, ensure_ascii=False, indent=1))

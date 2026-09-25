@@ -739,11 +739,32 @@ def main():
     ap.add_argument("--json-out", default=P("docs", "monitor.json"))
     ap.add_argument("--mode", choices=["safe", "full"], default="safe")
     ap.add_argument("--quiet", action="store_true")
+    ap.add_argument("--skip-if-same", action="store_true",
+                    help="ถ้าข้อมูลไม่เปลี่ยน (ตัด timestamp) ให้ข้ามการเขียนไฟล์ — กัน commit/Pages build ซ้ำ")
+    ap.add_argument("--fingerprint-file", default="", help="ไฟล์เก็บลายนิ้วมือข้อมูล (ค่าเริ่มต้น: ข้าง ๆ --out)")
     a = ap.parse_args()
 
     M = compute(mode=a.mode)
     html = render(M)
     os.makedirs(os.path.dirname(a.out), exist_ok=True)
+
+    # ลายนิ้วมือข้อมูล (ตัด timestamp ออก) — ใช้ข้ามการเขียนเมื่อเนื้อหาเหมือนเดิม
+    fp_file = a.fingerprint_file or (os.path.join(os.path.dirname(a.out) or ".", ".fingerprint"))
+    import hashlib, re as _re
+    fp = hashlib.sha256(_re.sub(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z", "TS", html).encode()).hexdigest()[:16]
+    if a.skip_if_same and os.path.exists(fp_file):
+        try:
+            if open(fp_file, encoding="utf-8").read().strip() == fp:
+                if not a.quiet:
+                    print("ข้อมูลไม่เปลี่ยน (fingerprint %s) — ข้ามการเขียน %s" % (fp, a.out))
+                return 0
+        except OSError:
+            pass
+    try:
+        with open(fp_file, "w", encoding="utf-8") as f:
+            f.write(fp)
+    except OSError:
+        pass
     with open(a.out, "w", encoding="utf-8") as f:
         f.write(html)
     summary = {"built_at": M["built_at"], "mode": M["mode"],

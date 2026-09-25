@@ -1,18 +1,20 @@
-# ชุดรัน forward-test ฟรีบน GitHub Actions (v3 — ทุก 30 นาที + เผยแพร่หน้า monitor)
-# วางไฟล์นี้ที่  <repo>/.github/workflows/forward-test.yml
+# ชุดรัน forward-test บน GitHub Actions (v4 — ทุก 10 นาทีรอบเวลาเข้าไม้ · Pages จาก repo นี้เอง)
 #
-# ทำงาน:
-#   ทุก 30 นาที → gate เช็คว่ามีเมืองถึงเวลาเข้าไม้ไหม (ถ้าไม่มี = จบทันที ไม่เผานาที CI)
-#                ถ้ามี → สแกนเฉพาะเมืองนั้น → บันทึก bid/ask จริง + depth + snapshot (log v3)
-#   ทุกวัน 03:20 UTC → จักรวาล + bid/ask + เติมเฉลย + รายงาน forward
-#   หลังมีข้อมูลใหม่/รอบรายวัน → สร้างหน้า monitor แล้วเผยแพร่ขึ้น GitHub Pages (ถ้าตั้ง secret MONITOR_PAT)
+# รอบงาน:
+#   ทุก 10 นาที → gate ตัดสิน "เมืองไหนควรสแกน" ตาม時間 local ของแต่ละเมือง:
+#       • entry 15:30–16:30 local → เก็บทุก 10 นาที (7 ตัวอย่าง/เมือง/วัน รอบเวลาตัดสินใจ 16:00)
+#       • ctx   14:00–18:00 local → เก็บทุก 30 นาที (ราคาเส้นทางก่อน/หลังเข้าไม้)
+#       • นอกนั้นข้าม → รอบที่ไม่มีเมือง = จบใน ~15 วิ
+#   ทุกวัน 03:20 UTC → จักรวาล + วัด bid/ask + เติมเฉลย + รายงาน forward
+#   หน้า monitor ถูกสร้างใหม่ + commit docs/ เมื่อ KPI เปลี่ยน → GitHub Pages (source = main /docs) เสิร์ฟให้เอง
 #
-# นาที CI: รอบมีเมือง ~1-1.5 นาที · รอบเปล่า ~10 วิ → ~1,400-1,700 นาที/เดือน (โควตา private = 2,000)
+# ทำไมต้องเป็น repo public: GitHub คิดนาที CI "ปัดขึ้นเป็นนาทีต่อรอบ" → cadence 10 นาที = 144 รอบ/วัน
+#   ≈ 4,400 นาที/เดือน ซึ่งเกินโควตาฟรี 2,000 ของ repo ส่วนตัว · repo สาธารณะ = ไม่คิดนาที
 name: wxedge-forward-test
 
 on:
   schedule:
-    - cron: "*/30 * * * *"      # ทุก 30 นาที (UTC)
+    - cron: "*/10 * * * *"      # ทุก 10 นาที (UTC)
     - cron: "20 3 * * *"        # รายวัน 03:20 UTC
   workflow_dispatch:
 
@@ -26,13 +28,17 @@ concurrency:
 jobs:
   log:
     runs-on: ubuntu-latest
-    timeout-minutes: 8
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
 
-      - name: เช็คช่วงเวลา (ข้ามรอบเปล่า — ประหยัดนาที CI)
+      - name: เช็คว่ามีเมืองถึงเวลาไหม (ข้ามรอบเปล่า + เว้นระยะต่อเมือง)
         id: gate
-        run: python3 deploy/gate.py --hour-window 15-17 >> "$GITHUB_OUTPUT"
+        run: >-
+          python3 deploy/gate.py
+          --entry 15:30-16:30 --entry-gap 10
+          --ctx 14:00-18:00 --ctx-gap 30
+          >> "$GITHUB_OUTPUT"
 
       - uses: actions/setup-python@v5
         if: steps.gate.outputs.run == 'true' || github.event.schedule == '20 3 * * *' || github.event_name == 'workflow_dispatch'
@@ -46,10 +52,11 @@ jobs:
           python -m pip install --quiet --upgrade pip
           pip install --quiet -r deploy/requirements.txt
 
-      - name: "บันทึกไม้ + ราคาจริง (log v3: bid/ask · depth · obs · snapshot)"
+      - name: "บันทึกราคาจริง (log v3: bid/ask · depth · obs · snapshot) — สแกนขนาน"
         if: steps.gate.outputs.run == 'true' || github.event_name == 'workflow_dispatch'
         run: |
-          python cheap_live.py --log --hour-window 15-17 --cities "${{ steps.gate.outputs.cities }}"
+          echo "โหมด ${{ steps.gate.outputs.mode }} · เมือง: ${{ steps.gate.outputs.cities }}"
+          python cheap_live.py --log --workers 4 --cities "${{ steps.gate.outputs.cities }}"
           wc -l data/cheap_live_log.csv
 
       - name: รายวัน — จักรวาล + bid/ask + เติมเฉลย + รายงาน forward
@@ -60,7 +67,7 @@ jobs:
           python forward_resolve.py || true
           tail -20 reports/forward_report.md || true
 
-      - name: commit ข้อมูลกลับเข้า repo (ถ้ามีการเปลี่ยน)
+      - name: "อัปเดตหน้า monitor (เมื่อ KPI เปลี่ยน) + commit กลับเข้า repo"
         id: commit
         if: always() && steps.gate.conclusion == 'success'
         run: |
@@ -68,6 +75,14 @@ jobs:
           git config user.email "wxedge-bot@users.noreply.github.com"
           git add -f data/cheap_live_log.csv data/universe.json data/bidask_probe.json data/forward_stats.json \
                      data/snapshots reports/bidask_check.md reports/forward_report.md || true
+
+          # สร้างหน้า monitor ใหม่เฉพาะเมื่อตัวเลข KPI เปลี่ยน (กัน Pages build ถี่เกินจำเป็น)
+          KPI_CHANGED=$(git diff --cached --name-only | grep -E 'cheap_live_log|universe|bidask_probe|forward_stats|reports/' || true)
+          if [ -n "$KPI_CHANGED" ] || [ "${{ github.event.schedule }}" = "20 3 * * *" ] || [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            python build_monitor.py --quiet --mode "${MODE:-full}" --skip-if-same --out docs/index.html --json-out docs/monitor.json || true
+            git add -f docs
+          fi
+
           if git diff --cached --quiet; then
             echo "ไม่มีข้อมูลใหม่"
             echo "changed=false" >> "$GITHUB_OUTPUT"
@@ -77,21 +92,8 @@ jobs:
             echo "changed=true" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: "เผยแพร่หน้า monitor ขึ้น GitHub Pages (ต้องมี secret MONITOR_PAT)"
-        if: always() && (steps.commit.outputs.changed == 'true' || github.event.schedule == '20 3 * * *' || github.event_name == 'workflow_dispatch')
-        env:
-          MONITOR_PAT: ${{ secrets.MONITOR_PAT }}
-          # safe = ซ่อน bin/ราคาของไม้ที่ยังไม่ settle (แนะนำถ้าหน้านี้สาธารณะ) · full = โชว์หมด
-          MODE: full
-        run: |
-          if [ -z "${MONITOR_PAT:-}" ]; then
-            echo "⚠ ยังไม่ได้ตั้ง secret MONITOR_PAT — ข้ามการเผยแพร่ (หน้าเว็บยังสร้างใน docs/index.html)"
-            exit 0
-          fi
-          bash deploy/publish_monitor.sh
-
       - name: สรุปในหน้า Actions
         if: always()
         run: |
-          echo "แถวใน log: $(wc -l < data/cheap_live_log.csv 2>/dev/null || echo 0) · เมืองรอบนี้: ${{ steps.gate.outputs.cities }}"
+          echo "แถวใน log: $(wc -l < data/cheap_live_log.csv 2>/dev/null || echo 0) · โหมด: ${{ steps.gate.outputs.mode }} · เมืองรอบนี้: ${{ steps.gate.outputs.cities }}"
           tail -3 data/cheap_live_log.csv 2>/dev/null || true

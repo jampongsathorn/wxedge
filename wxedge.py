@@ -78,6 +78,23 @@ def _cache_path(url, tag):
 _LAST_CALL = {"t": 0.0, "host": ""}
 HOST_RATE = {"mesonet.agron.iastate.edu": 2.0, "api.weather.gov": 1.0}
 
+# ── pacing ต่อ host แบบ thread-safe (จำเป็นเมื่อสแกนหลายเมืองพร้อมกัน — ไม่งั้นยิง IEM พร้อมกันแล้วโดน 429) ──
+import threading as _threading
+_LOCK = _threading.Lock()
+_HOST_LOCKS = {}
+_LAST_BY_HOST = {}
+
+
+def _host_slot(host, gap):
+    """จองคิว: เว้นระยะขั้นต่ำ gap วินาทีต่อ host (ทั้งโปรเซส)"""
+    with _LOCK:
+        lk = _HOST_LOCKS.setdefault(host, _threading.Lock())
+    with lk:
+        wait = gap - (time.time() - _LAST_BY_HOST.get(host, 0.0))
+        if wait > 0:
+            time.sleep(wait)
+        _LAST_BY_HOST[host] = time.time()
+
 
 def http_get(url, ttl=600, tag="get", no_cache=False):
     """GET + cache (ttl) + retry/backoff + pacing ต่อ host (IEM/NOAA มี rate limit)"""
@@ -86,14 +103,10 @@ def http_get(url, ttl=600, tag="get", no_cache=False):
     if not no_cache and os.path.exists(p) and time.time() - os.path.getmtime(p) < ttl:
         return open(p, encoding="utf-8").read()
     host = urllib.parse.urlparse(url).netloc
-    for attempt in range(4):
-        gap = HOST_RATE.get(host, 1.2)
-        wait = time.time() - _LAST_CALL["t"]
-        if _LAST_CALL["host"] == host and wait < gap:
-            time.sleep(gap - wait)
+    for attempt in range(5):
+        _host_slot(host, HOST_RATE.get(host, 1.2))
         try:
             req = urllib.request.Request(url, headers=UA)
-            _LAST_CALL.update(t=time.time(), host=host)
             with urllib.request.urlopen(req, timeout=90) as r:
                 txt = r.read().decode("utf-8", "replace")
             if "Too many requests" in txt or "rate limit" in txt.lower():
@@ -104,9 +117,11 @@ def http_get(url, ttl=600, tag="get", no_cache=False):
             return txt
         except Exception as e:
             code = getattr(e, "code", None)
-            if attempt == 3:
+            if attempt == 4:
                 raise
-            time.sleep(2.5 * (attempt + 1) + (2.0 if code == 429 else 0))
+            # 429 → ถอยนานขึ้นแบบสุ่ม เพื่อไม่ให้หลาย thread กลับมายิงพร้อมกันอีก
+            back = 3.0 * (attempt + 1) + (6.0 if code == 429 else 0) + __import__("random").random() * 2
+            time.sleep(back)
     return ""
 
 
