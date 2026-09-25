@@ -1,6 +1,6 @@
 {
- "built_at": "2026-09-25T13:04:15Z",
- "mode": "safe",
+ "built_at": "2026-09-25T13:10:05Z",
+ "mode": "full",
  "backtest": {
   "n": 379,
   "wins": 356,

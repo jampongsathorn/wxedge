@@ -495,7 +495,12 @@ def render(M):
       '<a href="#forward">Forward-test</a><a href="#backtest">Backtest</a><a href="#model">โมเดล</a>'
       '<a href="#rules">กติกา</a><a href="#pipeline">รอบงาน</a></nav></header>')
 
-    A('<div class="wrap"><main id="main">')
+    A('<div class="wrap">')
+    if not safe:
+        A('<div class="note warnbox" style="margin-top:14px"><strong>โหมดเต็ม (หน้าเว็บสาธารณะ)</strong> — หน้านี้แสดง bin · ราคา · ความลึกของสมุด '
+          'รวมถึงไม้ที่ยังไม่ settle และตัวเลขกติกาครบ · ถ้าต้องการซ่อน ตั้ง <code>MODE=safe</code> ใน workflow '
+          'หรือรัน <code>python3 build_monitor.py --mode safe</code></div>')
+    A('<main id="main">')
 
     # ── 1. เป้าหมายก่อนใช้เงินจริง ──
     A('<section id="goals" aria-labelledby="goalsH"><h2 id="goalsH">เป้าหมายก่อนใช้เงินจริง</h2>')

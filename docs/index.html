@@ -114,7 +114,9 @@ footer{border-top:1px solid var(--line);margin-top:40px;padding:18px 0 calc(24px
 <button class="btn" id="refreshBtn" type="button" aria-label="โหลดข้อมูลใหม่">↻ โหลดใหม่</button>
 <button class="btn" id="autoBtn" type="button" aria-pressed="true" aria-label="สลับการอัปเดตอัตโนมัติทุก 15 นาที">อัปเดตอัตโนมัติ: เปิด</button>
 </div><nav class="toc topin" aria-label="สารบัญ"><a href="#goals">เป้าหมาย</a><a href="#kpi">KPI</a><a href="#forward">Forward-test</a><a href="#backtest">Backtest</a><a href="#model">โมเดล</a><a href="#rules">กติกา</a><a href="#pipeline">รอบงาน</a></nav></header>
-<div class="wrap"><main id="main">
+<div class="wrap">
+<div class="note warnbox" style="margin-top:14px"><strong>โหมดเต็ม (หน้าเว็บสาธารณะ)</strong> — หน้านี้แสดง bin · ราคา · ความลึกของสมุด รวมถึงไม้ที่ยังไม่ settle และตัวเลขกติกาครบ · ถ้าต้องการซ่อน ตั้ง <code>MODE=safe</code> ใน workflow หรือรัน <code>python3 build_monitor.py --mode safe</code></div>
+<main id="main">
 <section id="goals" aria-labelledby="goalsH"><h2 id="goalsH">เป้าหมายก่อนใช้เงินจริง</h2>
 <div class="cards grid">
 <div class="card"><h3>ความคืบหน้า 5 ข้อ</h3><div class="gate">
@@ -131,8 +133,8 @@ footer{border-top:1px solid var(--line);margin-top:40px;padding:18px 0 calc(24px
 </div>
 <div class="card"><h3>สถานะ pipeline</h3>
 <p class="sub">รอบถัดไป: <strong id="nextRun">—</strong></p>
-<p class="sub">log เริ่มเก็บ: <time datetime="2026-09-25T13:04:15Z">—</time></p>
-<p class="sub">สร้างหน้านี้: <time datetime="2026-09-25T13:04:15Z">2026-09-25T13:04:15Z</time></p>
+<p class="sub">log เริ่มเก็บ: <time datetime="2026-09-25T13:10:05Z">—</time></p>
+<p class="sub">สร้างหน้านี้: <time datetime="2026-09-25T13:10:05Z">2026-09-25T13:10:05Z</time></p>
 <p class="sub" id="live" aria-live="polite">ข้อมูลฝังในหน้า ณ เวลาที่สร้าง — กด “โหลดใหม่” เพื่อดึงล่าสุด</p>
 </div></div></section>
 <section id="kpi" aria-labelledby="kpiH"><h2 id="kpiH">KPI หลัก</h2><div class="grid kpis">
@@ -253,7 +255,7 @@ footer{border-top:1px solid var(--line);margin-top:40px;padding:18px 0 calc(24px
 </tbody></table></div></details>
 </section>
 <section id="rules" aria-labelledby="rlH"><h2 id="rlH">กติกาที่ล็อกไว้</h2><div class="grid cards">
-<div class="card"><h3>จังหวะเข้าไม้</h3><p class="sub">เข้าเมื่อเวลา local ของเมืองนั้นถึงชั่วโมงตัดสินใจ (ช่วง 15:00–17:00) แล้วค่อยเลือก bin เดียวจากความน่าจะเป็นสูงสุด · ถือถึงเฉลย ไม่ขายทำกำไรระหว่างทาง</p><p class="sub" style="color:var(--muted2)">โหมดสาธารณะ: ซ่อนตัวเลขเกณฑ์ (ราคา/p/edge/spread) — ดูได้ในโหมด full</p></div>
+<div class="card"><h3>จังหวะเข้าไม้</h3><ul class="clean"><li>เข้าเวลา local <strong>16:00</strong> (ช่วง 15:00–17:00 · ช่วงสายช่วยได้ 15:00 / 17:00)</li><li>โมเดลต้อง p ≥ <strong>0.9</strong> (โหมดคม p ≥ 0.97)</li><li>ราคา YES: <strong>0.02–0.1</strong> (ไม้หลัก) / 0.02–0.25 (ไม้รอง)</li><li>edge ≥ 0.15 · spread ≤ 0.04</li><li>ฝั่ง NO: YES bid ≥ 0.5 และ bid − p ≥ 0.3 (bin ที่พิสูจน์ว่าเป็นไปไม่ได้)</li></ul></div>
 <div class="card"><h3>ขนาดไม้ &amp; ความเสี่ยง</h3><ul class="clean"><li>ไม้ละ <strong>1.00%</strong> ของพอร์ต (ช่วงทดลองใช้ 0.25–0.5%)</li><li>สูงสุด 6 ไม้/วัน · 5% ของพอร์ต/วัน</li><li>หยุดเมื่อ drawdown 15%</li><li>ทางออก: hold_to_resolution · stop เสริม -25%</li></ul></div>
 <div class="card"><h3>ต้นทุน &amp; เผื่อไว้</h3><ul class="clean"><li>tick ขั้นต่ำ 0.01 · ค่าธรรมเนียมสมมติ 0.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.0%</li><li>ไม้ที่ราคา &lt; 0.02 ห้ามซื้อ (ทดสอบแล้วชนะแค่ 6.0%)</li><li>เทียบ ask จริงทุกครั้งก่อนกดซื้อ</li></ul></div>
 </div>
@@ -268,7 +270,7 @@ footer{border-top:1px solid var(--line);margin-top:40px;padding:18px 0 calc(24px
 <section id="pipeline" aria-labelledby="plH"><h2 id="plH">รอบงานอัตโนมัติ</h2><div class="tblwrap"><table><caption>ตารางที่ตั้งไว้บน GitHub Actions (UTC) — ทุกอย่าง commit กลับเข้า repo เอง</caption><thead><tr><th scope="col">เวลา</th><th scope="col">ทำอะไร</th><th scope="col">ได้อะไร</th></tr></thead><tbody><tr><td>ทุก 30 นาที (:00, :30 UTC)</td><td>เช็คว่ามีเมืองถึงเวลาตัดสินใจไหม → สแกนเฉพาะเมืองนั้น</td><td>bid/ask + depth + obs + σ + snapshot</td></tr><tr><td>ทุกวัน 03:20 UTC</td><td>อัปเดตจักรวาล · วัดช่องว่าง bid/ask · เติมเฉลย</td><td>hit rate/EV/Brier จริง + รายงาน</td></tr><tr><td>ทุกครั้งที่ push</td><td>รันชุดทดสอบ 20 ข้อ</td><td>กันโค้ดพังเงียบ ๆ</td></tr></tbody></table></div>
 <p class="sub">นาที CI ที่ใช้ ~1,400–1,700/เดือน — อยู่ในโควตาฟรีของ repo ส่วนตัว (2,000 นาที)</p>
 </section>
-</main><footer><p>หน้านี้สร้างอัตโนมัติจาก <code>build_monitor.py</code> · โหมด safe · สร้างเมื่อ <time datetime="2026-09-25T13:04:15Z">2026-09-25T13:04:15Z</time></p><p>ตัวเลขทั้งหมดคำนวณสดจาก data/ ในขณะสร้าง (ไม่ใส่ค่าคงที่) · backtest ใช้ราคาซื้อขายล่าสุดจากประวัติตลาด · ผลจริงจะมาจาก forward-test เท่านั้น</p><p>ไม่ใช่คำแนะนำการลงทุน · ตลาดพยากรณ์อากาศมีความเสี่ยงสภาพคล่อง/การตัดสิน · ตรวจ ToS และภูมิภาคก่อนใช้เงินจริง</p></footer></div>
+</main><footer><p>หน้านี้สร้างอัตโนมัติจาก <code>build_monitor.py</code> · โหมด full · สร้างเมื่อ <time datetime="2026-09-25T13:10:05Z">2026-09-25T13:10:05Z</time></p><p>ตัวเลขทั้งหมดคำนวณสดจาก data/ ในขณะสร้าง (ไม่ใส่ค่าคงที่) · backtest ใช้ราคาซื้อขายล่าสุดจากประวัติตลาด · ผลจริงจะมาจาก forward-test เท่านั้น</p><p>ไม่ใช่คำแนะนำการลงทุน · ตลาดพยากรณ์อากาศมีความเสี่ยงสภาพคล่อง/การตัดสิน · ตรวจ ToS และภูมิภาคก่อนใช้เงินจริง</p></footer></div>
 <script>
 (function(){
  try{
