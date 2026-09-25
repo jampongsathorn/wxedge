@@ -131,8 +131,8 @@ footer{border-top:1px solid var(--line);margin-top:40px;padding:18px 0 calc(24px
 </div>
 <div class="card"><h3>สถานะ pipeline</h3>
 <p class="sub">รอบถัดไป: <strong id="nextRun">—</strong></p>
-<p class="sub">log เริ่มเก็บ: <time datetime="2026-09-25T13:03:17Z">—</time></p>
-<p class="sub">สร้างหน้านี้: <time datetime="2026-09-25T13:03:17Z">2026-09-25T13:03:17Z</time></p>
+<p class="sub">log เริ่มเก็บ: <time datetime="2026-09-25T13:04:15Z">—</time></p>
+<p class="sub">สร้างหน้านี้: <time datetime="2026-09-25T13:04:15Z">2026-09-25T13:04:15Z</time></p>
 <p class="sub" id="live" aria-live="polite">ข้อมูลฝังในหน้า ณ เวลาที่สร้าง — กด “โหลดใหม่” เพื่อดึงล่าสุด</p>
 </div></div></section>
 <section id="kpi" aria-labelledby="kpiH"><h2 id="kpiH">KPI หลัก</h2><div class="grid kpis">
@@ -268,9 +268,10 @@ footer{border-top:1px solid var(--line);margin-top:40px;padding:18px 0 calc(24px
 <section id="pipeline" aria-labelledby="plH"><h2 id="plH">รอบงานอัตโนมัติ</h2><div class="tblwrap"><table><caption>ตารางที่ตั้งไว้บน GitHub Actions (UTC) — ทุกอย่าง commit กลับเข้า repo เอง</caption><thead><tr><th scope="col">เวลา</th><th scope="col">ทำอะไร</th><th scope="col">ได้อะไร</th></tr></thead><tbody><tr><td>ทุก 30 นาที (:00, :30 UTC)</td><td>เช็คว่ามีเมืองถึงเวลาตัดสินใจไหม → สแกนเฉพาะเมืองนั้น</td><td>bid/ask + depth + obs + σ + snapshot</td></tr><tr><td>ทุกวัน 03:20 UTC</td><td>อัปเดตจักรวาล · วัดช่องว่าง bid/ask · เติมเฉลย</td><td>hit rate/EV/Brier จริง + รายงาน</td></tr><tr><td>ทุกครั้งที่ push</td><td>รันชุดทดสอบ 20 ข้อ</td><td>กันโค้ดพังเงียบ ๆ</td></tr></tbody></table></div>
 <p class="sub">นาที CI ที่ใช้ ~1,400–1,700/เดือน — อยู่ในโควตาฟรีของ repo ส่วนตัว (2,000 นาที)</p>
 </section>
-</main><footer><p>หน้านี้สร้างอัตโนมัติจาก <code>build_monitor.py</code> · โหมด safe · สร้างเมื่อ <time datetime="2026-09-25T13:03:17Z">2026-09-25T13:03:17Z</time></p><p>ตัวเลขทั้งหมดคำนวณสดจาก data/ ในขณะสร้าง (ไม่ใส่ค่าคงที่) · backtest ใช้ราคาซื้อขายล่าสุดจากประวัติตลาด · ผลจริงจะมาจาก forward-test เท่านั้น</p><p>ไม่ใช่คำแนะนำการลงทุน · ตลาดพยากรณ์อากาศมีความเสี่ยงสภาพคล่อง/การตัดสิน · ตรวจ ToS และภูมิภาคก่อนใช้เงินจริง</p></footer></div>
+</main><footer><p>หน้านี้สร้างอัตโนมัติจาก <code>build_monitor.py</code> · โหมด safe · สร้างเมื่อ <time datetime="2026-09-25T13:04:15Z">2026-09-25T13:04:15Z</time></p><p>ตัวเลขทั้งหมดคำนวณสดจาก data/ ในขณะสร้าง (ไม่ใส่ค่าคงที่) · backtest ใช้ราคาซื้อขายล่าสุดจากประวัติตลาด · ผลจริงจะมาจาก forward-test เท่านั้น</p><p>ไม่ใช่คำแนะนำการลงทุน · ตลาดพยากรณ์อากาศมีความเสี่ยงสภาพคล่อง/การตัดสิน · ตรวจ ToS และภูมิภาคก่อนใช้เงินจริง</p></footer></div>
 <script>
 (function(){
+ try{
   var fmt = new Intl.DateTimeFormat('th-TH',{dateStyle:'medium',timeStyle:'short',timeZone:'Asia/Bangkok'});
   var fmtD = new Intl.DateTimeFormat('th-TH',{dateStyle:'medium',timeZone:'Asia/Bangkok'});
   document.querySelectorAll('time[datetime]').forEach(function(el){
@@ -298,7 +299,12 @@ footer{border-top:1px solid var(--line);margin-top:40px;padding:18px 0 calc(24px
   /* auto-refresh 15 นาที — ปิดได้ (จำค่าไว้ใน localStorage) */
   var btn = document.getElementById('autoBtn');
   var key = 'wx-mon-autorefresh';
-  var on = localStorage.getItem(key) !== '0';
+  /* localStorage อาจถูกบล็อกใน iframe แบบ sandbox — ต้องไม่ทำให้สคริปต์พัง */
+  var store = {
+    get: function(k){ try { return window.localStorage.getItem(k); } catch(e){ return null; } },
+    set: function(k,v){ try { window.localStorage.setItem(k,v); } catch(e){} }
+  };
+  var on = store.get(key) !== '0';
   var timer = null;
   function apply(){
     if(btn){ btn.setAttribute('aria-pressed', on?'true':'false'); btn.textContent = on? 'อัปเดตอัตโนมัติ: เปิด' : 'อัปเดตอัตโนมัติ: ปิด'; }
@@ -306,7 +312,7 @@ footer{border-top:1px solid var(--line);margin-top:40px;padding:18px 0 calc(24px
     if(on){ timer = setTimeout(function(){ location.reload(); }, 15*60*1000); }
   }
   if(btn){
-    btn.addEventListener('click', function(){ on = !on; localStorage.setItem(key, on?'1':'0'); apply(); });
+    btn.addEventListener('click', function(){ on = !on; store.set(key, on?'1':'0'); apply(); });
   }
   apply();
 
@@ -316,6 +322,7 @@ footer{border-top:1px solid var(--line);margin-top:40px;padding:18px 0 calc(24px
     if(st) st.textContent = 'กำลังโหลดใหม่…';
     location.reload();
   }); }
+ }catch(e){ if(window.console) console.warn('monitor script:', e); }
 })();
 </script>
 </body></html>

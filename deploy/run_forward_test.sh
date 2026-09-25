@@ -22,6 +22,8 @@ if [ "${DAILY:-0}" = "1" ]; then
   $PY -c "import cheap_live as C; C.build_universe(verbose=True)"
   $PY bidask_check.py --max-bins 90 || true
   $PY forward_resolve.py || true
+  $PY build_monitor.py --quiet || true                 # สร้างหน้า monitor ให้สดใหม่
+  [ -n "${MONITOR_PAT:-}" ] && bash deploy/publish_monitor.sh || true
 else
   GATE=$(PYTHONPATH=. $PY deploy/gate.py --hour-window "$WINDOW")
   echo "$GATE" | sed 's/^/   /'

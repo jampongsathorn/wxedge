@@ -408,6 +408,7 @@ footer{border-top:1px solid var(--line);margin-top:40px;padding:18px 0 calc(24px
 
 JS = r"""
 (function(){
+ try{
   var fmt = new Intl.DateTimeFormat('th-TH',{dateStyle:'medium',timeStyle:'short',timeZone:'Asia/Bangkok'});
   var fmtD = new Intl.DateTimeFormat('th-TH',{dateStyle:'medium',timeZone:'Asia/Bangkok'});
   document.querySelectorAll('time[datetime]').forEach(function(el){
@@ -435,7 +436,12 @@ JS = r"""
   /* auto-refresh 15 นาที — ปิดได้ (จำค่าไว้ใน localStorage) */
   var btn = document.getElementById('autoBtn');
   var key = 'wx-mon-autorefresh';
-  var on = localStorage.getItem(key) !== '0';
+  /* localStorage อาจถูกบล็อกใน iframe แบบ sandbox — ต้องไม่ทำให้สคริปต์พัง */
+  var store = {
+    get: function(k){ try { return window.localStorage.getItem(k); } catch(e){ return null; } },
+    set: function(k,v){ try { window.localStorage.setItem(k,v); } catch(e){} }
+  };
+  var on = store.get(key) !== '0';
   var timer = null;
   function apply(){
     if(btn){ btn.setAttribute('aria-pressed', on?'true':'false'); btn.textContent = on? 'อัปเดตอัตโนมัติ: เปิด' : 'อัปเดตอัตโนมัติ: ปิด'; }
@@ -443,7 +449,7 @@ JS = r"""
     if(on){ timer = setTimeout(function(){ location.reload(); }, 15*60*1000); }
   }
   if(btn){
-    btn.addEventListener('click', function(){ on = !on; localStorage.setItem(key, on?'1':'0'); apply(); });
+    btn.addEventListener('click', function(){ on = !on; store.set(key, on?'1':'0'); apply(); });
   }
   apply();
 
@@ -453,6 +459,7 @@ JS = r"""
     if(st) st.textContent = 'กำลังโหลดใหม่…';
     location.reload();
   }); }
+ }catch(e){ if(window.console) console.warn('monitor script:', e); }
 })();
 """
 

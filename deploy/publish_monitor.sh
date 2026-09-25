@@ -11,6 +11,8 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 DEST_REPO="${DEST_REPO:-jampongsathorn/wxedge-monitor}"
+# DEST_URL = URL ปลายทาง (ใช้ตอนทดสอบกับ repo ท้องถิ่นได้ เช่น file:///tmp/monitor-bare.git)
+DEST_URL="${DEST_URL:-https://x-access-token:${MONITOR_PAT:-x}@github.com/$DEST_REPO.git}"
 MODE="${MODE:-safe}"
 PY=${PY:-python3}
 DRY=0
@@ -30,19 +32,35 @@ if [ -z "${MONITOR_PAT:-}" ]; then
   exit 0
 fi
 
+# ลายนิ้วมือข้อมูล (ตัด timestamp ออก) — กัน commit ซ้ำทุก 30 นาทีทั้งที่ข้อมูลไม่เปลี่ยน
+FP=$(python3 - <<'FPY'
+import hashlib, re
+s = open('docs/index.html', encoding='utf-8').read()
+s = re.sub(r'\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z', 'TS', s)
+print(hashlib.sha256(s.encode()).hexdigest()[:16])
+FPY
+)
+
 echo "② เตรียมโฟลเดอร์ปลายทาง"
 TMP=$(mktemp -d)
 trap 'rm -rf "$TMP"' EXIT
 git -c init.defaultBranch=main init -q "$TMP"
-git -C "$TMP" remote add origin "https://x-access-token:$MONITOR_PAT@github.com/$DEST_REPO.git"
+git -C "$TMP" remote add origin "$DEST_URL"
 if git -C "$TMP" fetch -q --depth 1 origin main 2>/dev/null; then
   git -C "$TMP" checkout -q -b main FETCH_HEAD
 else
   git -C "$TMP" checkout -q -b main
 fi
 
+if [ -f "$TMP/.fingerprint" ] && [ "$(cat "$TMP/.fingerprint")" = "$FP" ] && [ "${FORCE:-0}" != "1" ]; then
+  echo "   ข้อมูลไม่เปลี่ยน (fingerprint $FP) — ข้ามการ push · บังคับได้ด้วย FORCE=1"
+  exit 0
+fi
+echo "   fingerprint: $FP"
+
 echo "③ คัดลอก + commit"
 cp docs/index.html docs/monitor.json "$TMP"/
+printf '%s' "$FP" > "$TMP/.fingerprint"
 touch "$TMP/.nojekyll"
 [ -f "$TMP/README.md" ] || cat > "$TMP/README.md" <<'MD'
 # wxedge-monitor
