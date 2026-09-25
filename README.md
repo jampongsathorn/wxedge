@@ -690,6 +690,10 @@ stdlib ล้วน ไม่มี dependency · หน้าเว็บ inlin
 `build_monitor.py` สร้างหน้าเว็บ static ไฟล์เดียว (ไม่มี dependency ภายนอก/ไม่มี tracking) จากข้อมูลจริงใน `data/`
 ใช้มาตรฐาน Vercel Web Interface Guidelines (a11y · focus-visible · tabular-nums · Intl · prefers-reduced-motion · empty states)
 
+**หน้าเว็บจริง:** https://jampongsathorn.github.io/wxedge-monitor/ (repo: `jampongsathorn/wxedge-monitor` — สาธารณะ เก็บแค่ HTML/JSON ที่สร้างเสร็จ)
+· ค่าเริ่มต้นตอนนี้เป็น `MODE=full` (โชว์ bin/ราคา/กติกาเต็ม + ป้ายเตือนบนหน้า) · เปลี่ยนเป็น `safe` ได้ที่ env ใน workflow
+· secret `MONITOR_PAT` ตั้งไว้แล้ว → CI publish เองทุกครั้งที่ข้อมูลเปลี่ยน (ทดสอบแล้ว: run 36139275010 push สำเร็จ)
+
 **มีอะไรในหน้า:** เป้าหมายก่อนใช้เงินจริง 5 ข้อ + progress · KPI (ไม้จริง/hit rate/PnL/Brier/ask−last) ·
 ไม้ที่รอเฉลย · ผลตามฝั่ง/เมือง · equity curve 379 ไม้ (SVG) · stress หลังหัก ask · โมเดล+จักรวาล (chips agreement) ·
 กติกาที่ล็อก · สิ่งที่ทดสอบแล้วไม่ใช้ · รอบงานอัตโนมัติ · ปุ่มโหลดใหม่ + ปิด/เปิดอัปเดตอัตโนมัติ 15 นาที
