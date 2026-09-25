@@ -1,0 +1,60 @@
+# ชุดรัน forward-test ฟรีบน GitHub Actions
+# วางไฟล์นี้ที่  <repo>/.github/workflows/forward-test.yml
+# ทำงาน: ทุกชั่วโมง → สแกนเมืองที่ local time อยู่ในช่วง 14:00–19:00 → บันทึก bid/ask จริงลง log
+#        ทุกวัน 03:00 UTC → อัปเดต universe + ทดสอบช่องว่าง last-trade ↔ bid/ask
+# ฟรี: repo public ไม่จำกัดนาที · repo private 2,000 นาที/เดือน (งานนี้ใช้ ~1 นาที/รอบ → ~720 นาที/เดือน)
+name: wxedge-forward-test
+
+on:
+  schedule:
+    - cron: "5 * * * *"        # ทุกชั่วโมง นาทีที่ 5 (UTC) — ครอบทุก timezone ของ 33 เมือง
+    - cron: "0 3 * * *"        # รายวัน: universe + bid/ask probe
+  workflow_dispatch:           # กดรันเองได้จากหน้า Actions
+
+permissions:
+  contents: write              # ต้องมี เพื่อ commit log กลับเข้า repo
+
+concurrency:
+  group: wxedge-log
+  cancel-in-progress: false
+
+jobs:
+  log:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: ติดตั้ง dependency (numpy ตัวเดียว)
+        run: |
+          python -m pip install --quiet --upgrade pip
+          pip install --quiet -r deploy/requirements.txt
+
+      - name: บันทึกไม้ + ราคาจริง (เฉพาะเมืองที่ถึงเวลาเทรด)
+        run: |
+          python cheap_live.py --log
+          # บันทึกจำนวนแถวไว้ดูใน log ของ Actions
+          wc -l data/cheap_live_log.csv || true
+
+      - name: รายวัน — อัปเดตจักรวาลเมือง + วัดช่องว่าง bid/ask
+        if: github.event.schedule == '0 3 * * *'
+        run: |
+          python -c "import cheap_live as C; C.build_universe(verbose=True)"
+          python bidask_check.py --max-bins 90 || true
+
+      - name: commit ข้อมูลกลับเข้า repo (ถ้ามีการเปลี่ยน)
+        run: |
+          git config user.name  "wxedge-bot"
+          git config user.email "wxedge-bot@users.noreply.github.com"
+          git add -f data/cheap_live_log.csv data/universe.json data/bidask_probe.json reports/bidask_check.md || true
+          if git diff --cached --quiet; then
+            echo "ไม่มีข้อมูลใหม่"
+          else
+            git commit -m "forward-test log $(date -u +'%Y-%m-%dT%H:%MZ') [skip ci]"
+            git push
+          fi

@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<title>A4 — เทียบ 4 กลยุทธ์ (Polymarket daily temperature)</title>
+<style>
+  @page { size: A4 portrait; margin: 6.52mm; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: #eef1f5; }
+  body { font-family: "Noto Sans Thai","Sarabun","Leelawadee UI","Tahoma",system-ui,-apple-system,sans-serif;
+         color: #16202c; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .sheet { width: 198mm; margin: 0 auto; background: #fff; padding: 1.08mm 0 0; position: relative; }
+
+
+  /* screen-only frame (does not affect print/PDF) */
+  @media screen {
+    body { padding: 9mm 6mm; }
+    .sheet { max-width: 198mm; border-radius: 2mm; box-shadow: 0 1mm 5mm rgba(15,39,64,.16); padding: 6mm 6mm 5mm; }
+  }
+  /* ── header ── */
+  .head { background: #0f2740; color: #fff; border-radius: 2.83mm; padding: 3.26mm 4.36mm 2.83mm; }
+  .head h1 { margin: 0; font-size: 15.04pt; line-height: 1.28; letter-spacing: -.2px; }
+  .head h1 small { display: block; font-size: 9.57pt; font-weight: 400; opacity: .82; margin-top: 1.08mm; letter-spacing: 0; }
+  .metabar { display: flex; gap: 2.4mm; flex-wrap: wrap; margin-top: 2.17mm; font-size: 7.86pt; }
+  .metabar span { background: rgba(255,255,255,.12); border: .3mm solid rgba(255,255,255,.22);
+                  border-radius: 1.74mm; padding: .70.68mm 1.96mm; }
+
+  h2 { font-size: 10.14pt; margin: 2.72mm 0 1.41mm; padding-bottom: .8.7mm; border-bottom: .48.93mm solid #0f2740; }
+  h2 em { font-style: normal; font-weight: 400; font-size: 7.86pt; color: #5b6b7d; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 7.8pt; }
+  th { background: #e8eef5; color: #0f2740; text-align: left; padding: 1.14mm 1.47mm; font-size: 7.41pt;
+       border-bottom: .4mm solid #b9c7d6; line-height: 1.2; }
+  td { padding: 1.24mm 1.47mm; border-bottom: .27.18mm solid #dde4ec; vertical-align: top; line-height: 1.3; }
+  tr.alt td { background: #f8fafc; }
+  .rk { display: inline-block; width: 4.1mm; height: 4.1mm; border-radius: 50%; color: #fff; font-weight: 700;
+        text-align: center; line-height: 4.46mm; font-size: 7.51pt; margin-right: 1.08mm; }
+  .r1 { background: #c9a227; } .r2 { background: #7d8b9c; } .r3 { background: #a9713d; } .r4 { background: #b8c1cc; color:#2a3a4a; }
+  .nm { font-weight: 700; font-size: 8.54pt; }
+  .big { font-weight: 700; font-size: 9.8pt; line-height: 1.05; }
+  .win { color: #0f7a4a; } .bad { color: #b3261e; } .mut { color: #5b6b7d; font-size: 7.12pt; }
+  .tag { display:inline-block; background:#eef4ec; color:#1c6b40; border:.25mm solid #bfd8c8; border-radius:1.2mm;
+         padding:.27.18mm 1.08mm; font-size:6.9pt; margin-top:.5.44mm; }
+  .tagr { display:inline-block; background:#fdeeec; color:#a3221b; border:.25mm solid #f0c5c0; border-radius:1.2mm;
+         padding:.27.18mm 1.08mm; font-size:6.9pt; margin-top:.5.44mm; }
+
+  /* ── ablation bars ── */
+  .ab { display: flex; align-items: center; gap: 1.96mm; font-size: 7.8pt; margin-bottom: .81.55mm; }
+  .ab .lb { width: 66mm; color: #2a3a4a; }
+  .ab .bar { height: 2.7mm; border-radius: 1mm; background: #2f6f4f; }
+  .ab .bar.red { background: #b3261e; }
+  .ab .vl { font-weight: 700; }
+  .note { background: #f2f7f3; border-left: 1.08mm solid #2f6f4f; padding: 1.41mm 2.06mm; font-size: 7.86pt; margin-top: 1.19mm; line-height: 1.33; }
+
+  /* ── money cards ── */
+  .cards { display: flex; gap: 2mm; }
+  .card { flex: 1; border: .3.26mm solid #d5dde6; border-radius: 1.85mm; padding: 1.52mm 1.96mm; }
+  .card .t { font-size: 7.18pt; color: #5b6b7d; }
+  .card .v { font-size: 10.94pt; font-weight: 700; line-height: 1.1; margin: .3.26mm 0; }
+  .card .d { font-size: 7.18pt; color: #43535f; line-height: 1.32; }
+  .card.g { border-color: #bfd8c8; background: #f6faf7; } .card.r { border-color: #f0c5c0; background: #fdf7f6; }
+
+  /* ── bottom grid ── */
+  .grid { display: flex; gap: 3.69mm; margin-top: .6.52mm; }
+  .col { flex: 1; }
+  ol.pl { margin: 0; padding-left: 4.36mm; font-size: 7.8pt; line-height: 1.34; }
+  ol.pl li { margin-bottom: .5.44mm; }
+  ul.an { margin: 0; padding-left: 3.48mm; font-size: 7.8pt; line-height: 1.34; }
+  ul.an li { margin-bottom: .7.61mm; }
+  code { font-family: "DejaVu Sans Mono", ui-monospace, monospace; font-size: 7.06pt; background: #f1f4f8;
+         padding: .2.17mm .8.7mm; border-radius: .8.7mm; }
+  .foot { margin-top: 2.49mm; border-top: .38.06mm solid #cfd8e2; padding-top: 1.41mm; font-size: 6.9pt; color: #5b6b7d; line-height: 1.34; }
+  .pill { display:inline-block; background:#0f2740; color:#fff; border-radius:1.52mm; padding:.5.44mm 1.74mm; font-size:7.51pt; margin-right:1.32mm;}
+</style>
+</head>
+<body>
+<div class="sheet">
+
+  <div class="head">
+    <h1>เทียบ 4 กลยุทธ์ บนข้อมูลชุดเดียวกัน — ใครดีสุด และพิสูจน์ได้แค่ไหน
+      <small>Polymarket “Highest temperature in &lt;city&gt; on &lt;date&gt;” · 3 repos ชุมชน (PolyWeather / weatherbot / polyBot-Weather) vs wxedge (ของเรา)</small>
+    </h1>
+    <div class="metabar">
+      <span>เฉลยจริง <b>4,142</b> ตลาด-วัน (50 เมือง × 85 วัน)</span>
+      <span>ราคาจริงทุก bin <b>220,338</b> แถว</span>
+      <span>อินพุตเดียวกัน: พยากรณ์ <b>11</b> โมเดล</span>
+      <span>fit บน train เท่านั้น (split 2026-08-15)</span>
+      <span>25 ก.ย. 2026</span>
+    </div>
+  </div>
+
+  <h2>1 · ตารางตัดสิน <em>— ตัวเลขทั้งหมดวัดจากเฉลยและราคาจริงชุดเดียวกัน (ช่วงทดสอบ)</em></h2>
+  <table>
+    <thead>
+      <tr>
+        <th style="width:23%">อันดับ / กลยุทธ์</th>
+        <th style="width:12%">Day-ahead top-1</th>
+        <th style="width:11%">ระหว่างวัน 16:00</th>
+        <th style="width:14%">ROI ไม้ถูก (&lt;$0.25)</th>
+        <th style="width:21%">หลักฐานที่เจ้าตัวเปิดเอง</th>
+        <th style="width:19%">จุดสำคัญ</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><span class="rk r1">1</span><span class="nm">wxedge (ของเรา)</span></td>
+        <td><span class="big win">50.9%</span><div class="mut">top-2 80.2 · Brier 0.608 · PIT .252 · cov90 93.3</div></td>
+        <td><span class="big win">88.8%</span><div class="mut">n=1,850 · top-2 91.8</div></td>
+        <td><span class="big win">+493%</span><div class="mut">n=105 · ชนะ 77.1% @ เฉลี่ย 0.13</div></td>
+        <td>ไม่มี PnL จริง — <b>แต่เปิดทุกอย่างที่วัดได้</b>: 4,142 เฉลย + 220,338 ราคา + สคริปต์รันซ้ำ</td>
+        <td>ชนะด้วย 2 อย่าง: <b>หัก bias รายโมเดล</b> + <b>ใช้ข้อมูลหลัง peak</b><span class="tag">ต้องรอ 15:00 local</span></td>
+      </tr>
+      <tr class="alt">
+        <td><span class="rk r2">2</span><span class="nm">PolyWeather</span></td>
+        <td><span class="big">37.6%</span><div class="mut">Brier 0.710 · PIT .213 · cov90 97.5 → มั่นใจเกิน</div></td>
+        <td><span class="big">77.3%</span><div class="mut">เมื่อใส่ hard floor ของมันเอง (+39.7 จุด)</div></td>
+        <td><span class="big">+24%</span><div class="mut">n=1,848 · ชนะ 77.3% แต่ราคา 0.63</div></td>
+        <td>calibration report n=1,450: PIT std <b>0.294</b> (ดีมาก) chi² 56.9 cov90 0.824 · <b>ไม่มี PnL</b></td>
+        <td><b>hard floor = ไอเดียที่ดีที่สุดใน 3 repos</b> (bin ต่ำกว่า max_so_far = เป็นไปไม่ได้)<span class="tag">repo เดียวที่ยัง active</span></td>
+      </tr>
+      <tr>
+        <td><span class="rk r3">3</span><span class="nm">weatherbot</span></td>
+        <td><span class="big">45.5%</span><div class="mut">ดีสุดใน 3 repos · Brier 0.664 · cov90 89.2</div></td>
+        <td><span class="mut">— ไม่มีชั้นข้อมูลระหว่างวัน</span></td>
+        <td><span class="big bad">−12.8%</span><div class="mut">n=1,847 · ชนะ 0.2% (กติกา EV ของตัวเอง)</div></td>
+        <td><b>state.json: ทุน 10,000 → 7,800 (−22%)</b>, 194 ไม้ ชนะ 37 (20.8%) — เป็น paper ไม่ใช่เงินจริง</td>
+        <td>ดีไซน์ 2 แหล่ง + bias รายแหล่ง + <b>กติกาออกครบที่สุด</b> · แต่ calibration METAR (σ5.63) ไม่มีความหมาย<span class="tagr">กติกา argmax-edge เลือกหางผิดระบบ</span></td>
+      </tr>
+      <tr class="alt">
+        <td><span class="rk r4">4</span><span class="nm">polyBot-Weather</span></td>
+        <td><span class="big">34.7%</span><div class="mut">Brier 0.746 (แย่สุด)</div></td>
+        <td><span class="mut">— ไม่มี</span></td>
+        <td><span class="big">+0.3%</span><div class="mut">n=1,802 · ชนะ 1.4% = เสียงรบกวน</div></td>
+        <td><b>ไม่มีเลย</b> — ไม่มีไฟล์ทดสอบ/PnL · commit ล่าสุด ก.พ. 2026</td>
+        <td>σ ตารางตายตัว (2.5–7.5°F) · แหล่งเดียว (NWS) · ไม่มี bucket concept<span class="tagr">อ่อนสุด</span></td>
+      </tr>
+    </tbody>
+  </table>
+  <div class="mut" style="margin-top:1.52mm">อ้างอิง: ถ้าใช้ค่าเฉลี่ยดิบโดยไม่หัก bias รายโมเดล ผลจะตกเหลือ <b>33.5%</b> (ต่ำกว่าทุกกลยุทธ์ข้างบน) · ไม่มีการ overfit: ผลบน train เรียงลำดับเหมือนกัน (ของเรา 49.3 · weatherbot 44.2 · PolyWeather 41.1 · polyBot 34.5)</div>
+
+  <h2>2 · Ablation: ชนะเพราะอะไร <em>— ใช้ mu เดียวกัน สลับแค่สูตร σ</em></h2>
+  <div class="ab"><div class="lb">mu ของเรา + σ ของเรา</div><div class="bar" style="width:87%"></div><div class="vl">50.8%</div></div>
+  <div class="ab"><div class="lb">mu ของเรา + σ ของ polyBot (1.39&nbsp;°C ตายตัว)</div><div class="bar" style="width:87.5%"></div><div class="vl">50.9%</div></div>
+  <div class="ab"><div class="lb">mu ของเรา + σ ของ weatherbot (MAE pooled)</div><div class="bar" style="width:87.5%"></div><div class="vl">50.9%</div></div>
+  <div class="ab"><div class="lb">mu ของเรา + σ ของ PolyWeather (strata)</div><div class="bar" style="width:87.5%"></div><div class="vl">50.9%</div></div>
+  <div class="ab"><div class="lb"><b>mu = ค่าเฉลี่ยดิบ (หัก bias รายโมเดลออก)</b> + σ ของเรา</div><div class="bar red" style="width:15%"></div><div class="vl bad">33.5%</div></div>
+  <div class="note"><b>σ ไม่ใช่ประเด็น</b> — สลับสูตรความน่าจะเป็นของทั้ง 3 repos แล้วผลต่าง ≤ 0.1 จุด · <b>สิ่งที่ทำให้ต่างคือ “หัก bias รายโมเดลก่อนรวม” = +17.4 จุด</b> (33.5% → 50.9%) — ทั้ง 3 repos วัด σ/bias จากค่าดิบของโมเดล จึงกลืน bias เข้าไปในความกว้างของซิกม่า</div>
+
+  <h2>3 · ชั้นเงินจริง: “ทายถูก” ≠ “ทำเงิน” <em>— เข้าไม้ 16:00 local, ราคาทุก bin จาก CLOB</em></h2>
+  <div class="cards">
+    <div class="card g">
+      <div class="t">wxedge · ask 0.02–0.25 &amp; p ≥ 0.90</div>
+      <div class="v win">+493%</div>
+      <div class="d">ชนะ <b>77.1%</b> · ราคาเฉลี่ย <b>0.13</b> · n=105<br>ทายถูกเท่ากัน แต่ซื้อถูกกว่า 5 เท่า</div>
+    </div>
+    <div class="card">
+      <div class="t">PolyWeather+floor · เลือก bin p สูงสุด</div>
+      <div class="v">+24%</div>
+      <div class="d">ชนะ <b>77.3%</b> · ราคาเฉลี่ย <b>0.63</b> · n=1,848<br>ทายถูกเท่ากัน แต่ตลาดตั้งราคาแพงแล้ว</div>
+    </div>
+    <div class="card r">
+      <div class="t">ซื้อทุก bin &lt; 0.25 โดยไม่ใช้โมเดล</div>
+      <div class="v bad">−20%</div>
+      <div class="d">ชนะ <b>1%</b> · ราคา 0.013 · n=38,740<br>“ถูก” ไม่เท่ากับ “มี edge”</div>
+    </div>
+  </div>
+
+  <h2>4 · คำตอบ + วิธีใช้ (กติกาที่ผลทดสอบรองรับ)</h2>
+  <div class="grid">
+    <div class="col">
+      <ul class="an">
+        <li><b>ของเรา (wxedge) ดีสุดโดยรวม</b> — 50.9% day-ahead (สูงกว่าที่ดีสุดของ repo 5.4 จุด) และ 88.8% ระหว่างวัน (สูงกว่า floor 11.5 จุด) และ ROI +493% vs +24%</li>
+        <li><b>ถ้าจะลอกไอเดียจาก 3 repos → ลอก PolyWeather</b> (hard floor, ทำได้ใน 20 บรรทัด, +39.7 จุด) รองลงมา weatherbot (bias รายแหล่ง + กติกาออกครบ)</li>
+        <li><b>polyBot ไม่มีอะไรให้ลอก</b> — ไม่มีหลักฐาน, σ ตายตัว, แหล่งเดียว</li>
+        <li><b>ตัวขับเคลื่อนจริงมีแค่ 2 อย่าง</b>: (ก) หัก bias รายโมเดล (+17.4 จุด) (ข) ใช้ข้อมูลหลัง peak (+52 จุด)</li>
+      </ul>
+    </div>
+    <div class="col">
+      <ol class="pl">
+        <li>รอ <b>15:00–17:00 ตามเวลาท้องถิ่นของสถานี</b> (16:00 คุ้มสุด) — ห้ามทายก่อน 14:00</li>
+        <li>ใช้ max ที่วัดได้ + การกระจายตัวของส่วนที่ยังเพิ่มได้ → p ต่อ bin</li>
+        <li>ซื้อเฉพาะ <b>ask 0.02–0.25</b> ที่ <b>p ≥ 0.90</b> (หรือ ≥0.35 ถ้ารับเสี่ยงได้) · <b>ask &lt; 0.02 ห้ามซื้อ</b> (ชนะแค่ 6%)</li>
+        <li>ขนาด 1–2% ทุน/ไม้ · ~4 ไม้/วัน · รวม ≤10%</li>
+        <li>ถือถึงวันปิด · stop-loss −25% ได้ · <b>ห้าม take-profit</b> (วัดแล้วลด ROI)</li>
+        <li>obs ต้องเป็น <b>IEM METAR รายชั่วโมง</b> (ตรงตลาด 94%) — ห้ามใช้ NWS 5-min (56%)</li>
+      </ol>
+      <div class="mut" style="margin-top:1.32mm">
+        <span class="pill">ใช้เลย</span><code>python3 cheap_live.py</code> (ตอน 15:00–17:00 local) · <code>cheap_live.py --cities denver,seattle --pmin 0.35 --log</code> · <code>headtohead.py --split 2026-08-15</code>
+      </div>
+    </div>
+  </div>
+
+  <div class="foot">
+    <b>ข้อจำกัด (ต้องอ่าน)</b> · ROI ทุกตัวเป็น <b>ขอบเขตบน</b>: ใช้ราคาซื้อขายล่าสุดรายชั่วโมง ไม่ใช่ ask/size จริง และยังไม่หัก fee/spread/slippage · ช่วงวัด 85 วัน ฤดูเดียว (ก.ค.–ก.ย. 2026) ยังไม่ผ่านฤดูหนาว · <b>ไม่มี repo ใดมี track record เงินจริงที่เปิดเผย</b> (weatherbot เป็น paper และติดลบ, อีกสองตัวไม่เปิด) → นี่คือการเทียบ <i>ระเบียบวิธี</i> ไม่ใช่ <i>ผลงาน</i> · ทุกกลยุทธ์ถูกให้อินพุตชุดเดียวกัน (11 โมเดล) จึงไม่มีใครได้เปรียบเรื่องแหล่งข้อมูล<br>
+    <b>ที่มา</b> · <code>reports/headtohead.md</code> (รายงานเต็ม) · <code>headtohead.py --split 2026-08-15</code> · <code>reports/cheap_bets.md</code> · <code>reports/hitrate70.md</code> · <code>reports/three_repos_study.md</code>
+  </div>
+
+</div>
+</body>
+</html>

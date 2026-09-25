@@ -1,0 +1,9 @@
+__pycache__/
+*.pyc
+.venv/
+venv/
+.cache/
+.DS_Store
+*.log
+deploy/*.tar.gz
+deploy/*.zip
