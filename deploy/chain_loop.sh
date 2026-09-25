@@ -4,18 +4,18 @@
 # หลักคิด: GitHub cron เลื่อนได้ 15-60 นาที และงานที่ "ต้องเก็บทุก 10 นาที" ต้องการความแน่นอน
 #          จุดนี้จึงวนอยู่ใน job เดียว (job ละไม่เกิน 6 ชม.) แล้วสั่งรันตัวเองใหม่ต่อจากรอบถัดไป
 #
-# ตัวแปร: CHAIN_HOURS (ค่าเริ่มต้น 5.5) · INTERVAL_MIN (10) · STATE (data/chain_state.json)
+# ตัวแปร: CHAIN_HOURS (5.5) · INTERVAL_MIN (5) · ENTRY_WIN/GAP · CTX_WIN/GAP · STATE (data/chain_state.json)
 #         WORKERS (4) · ENTRY/CTX windows · DRY=1 = ไม่ push (ทดสอบ) · PUSH=0 = ไม่ push
 set -uo pipefail
 cd "$(dirname "$0")/.."
 PY=${PY:-python3}
-INTERVAL_MIN=${INTERVAL_MIN:-10}
+INTERVAL_MIN=${INTERVAL_MIN:-5}
 CHAIN_HOURS=${CHAIN_HOURS:-5.5}
 WORKERS=${WORKERS:-4}
-ENTRY_WIN=${ENTRY_WIN:-15:30-16:30}
-ENTRY_GAP=${ENTRY_GAP:-10}
-CTX_WIN=${CTX_WIN:-14:00-18:00}
-CTX_GAP=${CTX_GAP:-30}
+ENTRY_WIN=${ENTRY_WIN:-15:35-16:25}
+ENTRY_GAP=${ENTRY_GAP:-5}
+CTX_WIN=${CTX_WIN:-12:30-18:30}
+CTX_GAP=${CTX_GAP:-15}
 PUSH=${PUSH:-1}
 STATE=${STATE:-data/chain_state.json}
 HEARTBEAT_STALE_MIN=${HEARTBEAT_STALE_MIN:-25}
