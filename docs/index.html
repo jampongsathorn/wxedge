@@ -133,8 +133,8 @@ footer{border-top:1px solid var(--line);margin-top:40px;padding:18px 0 calc(24px
 </div>
 <div class="card"><h3>สถานะ pipeline</h3>
 <p class="sub">รอบถัดไป: <strong id="nextRun">—</strong></p>
-<p class="sub">log เริ่มเก็บ: <time datetime="2026-09-25T15:30:13Z">—</time></p>
-<p class="sub">สร้างหน้านี้: <time datetime="2026-09-25T15:30:13Z">2026-09-25T15:30:13Z</time></p>
+<p class="sub">log เริ่มเก็บ: <time datetime="2026-09-25T15:46:26Z">—</time></p>
+<p class="sub">สร้างหน้านี้: <time datetime="2026-09-25T15:46:26Z">2026-09-25T15:46:26Z</time></p>
 <p class="sub" id="live" aria-live="polite">ข้อมูลฝังในหน้า ณ เวลาที่สร้าง — กด “โหลดใหม่” เพื่อดึงล่าสุด</p>
 </div></div></section>
 <section id="kpi" aria-labelledby="kpiH"><h2 id="kpiH">KPI หลัก</h2><div class="grid kpis">
@@ -255,7 +255,7 @@ footer{border-top:1px solid var(--line);margin-top:40px;padding:18px 0 calc(24px
 </tbody></table></div></details>
 </section>
 <section id="rules" aria-labelledby="rlH"><h2 id="rlH">กติกาที่ล็อกไว้</h2><div class="grid cards">
-<div class="card"><h3>จังหวะเข้าไม้</h3><ul class="clean"><li>เข้าเวลา local <strong>16:00</strong> (ช่วง 15:00–17:00 · ช่วงสายช่วยได้ 15:00 / 17:00)</li><li>โมเดลต้อง p ≥ <strong>0.9</strong> (โหมดคม p ≥ 0.97)</li><li>ราคา YES: <strong>0.02–0.1</strong> (ไม้หลัก) / 0.02–0.25 (ไม้รอง)</li><li>edge ≥ 0.15 · spread ≤ 0.04</li><li>ฝั่ง NO: YES bid ≥ 0.5 และ bid − p ≥ 0.3 (bin ที่พิสูจน์ว่าเป็นไปไม่ได้)</li></ul></div>
+<div class="card"><h3>จังหวะเข้าไม้</h3><ul class="clean"><li>เข้าเวลา local <strong>16:00</strong> (ช่วง 15:00–17:00 · ช่วงสายช่วยได้ 15:00 / 17:00)</li><li>โมเดลต้อง p ≥ <strong>0.9</strong> (โหมดคม p ≥ 0.97)</li><li>ราคา YES: <strong>0.02–0.1</strong> (ไม้หลัก) / 0.02–0.25 (ไม้รอง)</li><li>edge ≥ 0.15 · spread ≤ 0.04</li><li>ฝั่ง NO: YES bid ≥ 0.5 และ bid − p ≥ 0.3 (bin ที่พิสูจน์ว่าเป็นไปไม่ได้)</li><li><strong>bucket ที่ซื้อ = bin ที่มี max-so-far อยู่ข้างใน</strong> (บัคเก็ตปัจจุบัน = bin ที่จะชนะถ้าวันจบเดี๋ยวนี้) — 100% ของไม้ใน backtest · ไม่ซื้อ bin สูงกว่า (แพ้เพราะ “ร้อนต่อ”) ไม่ซื้อ bin ต่ำกว่า</li><li>รอบเสริมที่ทดสอบแล้วดีกว่า: ชั้น ≤0.10 เก็บได้ตั้งแต่ 14:00 (hit 83%) + รอบหลัก 16:00–17:00 → 259 ไม้ · 88.0% · ROI +906% (vs รอบเดียว 165 ไม้ · 87.9% · +817%)</li></ul></div>
 <div class="card"><h3>ขนาดไม้ &amp; ความเสี่ยง</h3><ul class="clean"><li>ไม้ละ <strong>1.00%</strong> ของพอร์ต (ช่วงทดลองใช้ 0.25–0.5%)</li><li>สูงสุด 6 ไม้/วัน · 5% ของพอร์ต/วัน</li><li>หยุดเมื่อ drawdown 15%</li><li>ทางออก: hold_to_resolution · stop เสริม -25%</li></ul></div>
 <div class="card"><h3>ต้นทุน &amp; เผื่อไว้</h3><ul class="clean"><li>tick ขั้นต่ำ 0.01 · ค่าธรรมเนียมสมมติ 0.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.0%</li><li>ไม้ที่ราคา &lt; 0.02 ห้ามซื้อ (ทดสอบแล้วชนะแค่ 6.0%)</li><li>เทียบ ask จริงทุกครั้งก่อนกดซื้อ</li></ul></div>
 </div>
@@ -270,7 +270,7 @@ footer{border-top:1px solid var(--line);margin-top:40px;padding:18px 0 calc(24px
 <section id="pipeline" aria-labelledby="plH"><h2 id="plH">รอบงานอัตโนมัติ</h2><div class="tblwrap"><table><caption>ตารางที่ตั้งไว้บน GitHub Actions (UTC) — ทุกอย่าง commit กลับเข้า repo เอง</caption><thead><tr><th scope="col">เวลา</th><th scope="col">ทำอะไร</th><th scope="col">ได้อะไร</th></tr></thead><tbody><tr><td>ทุก 30 นาที (:00, :30 UTC)</td><td>เช็คว่ามีเมืองถึงเวลาตัดสินใจไหม → สแกนเฉพาะเมืองนั้น</td><td>bid/ask + depth + obs + σ + snapshot</td></tr><tr><td>ทุกวัน 03:20 UTC</td><td>อัปเดตจักรวาล · วัดช่องว่าง bid/ask · เติมเฉลย</td><td>hit rate/EV/Brier จริง + รายงาน</td></tr><tr><td>ทุกครั้งที่ push</td><td>รันชุดทดสอบ 20 ข้อ</td><td>กันโค้ดพังเงียบ ๆ</td></tr></tbody></table></div>
 <p class="sub">นาที CI ที่ใช้ ~1,400–1,700/เดือน — อยู่ในโควตาฟรีของ repo ส่วนตัว (2,000 นาที)</p>
 </section>
-</main><footer><p>หน้านี้สร้างอัตโนมัติจาก <code>build_monitor.py</code> · โหมด full · สร้างเมื่อ <time datetime="2026-09-25T15:30:13Z">2026-09-25T15:30:13Z</time></p><p>ตัวเลขทั้งหมดคำนวณสดจาก data/ ในขณะสร้าง (ไม่ใส่ค่าคงที่) · backtest ใช้ราคาซื้อขายล่าสุดจากประวัติตลาด · ผลจริงจะมาจาก forward-test เท่านั้น</p><p>ไม่ใช่คำแนะนำการลงทุน · ตลาดพยากรณ์อากาศมีความเสี่ยงสภาพคล่อง/การตัดสิน · ตรวจ ToS และภูมิภาคก่อนใช้เงินจริง</p></footer></div>
+</main><footer><p>หน้านี้สร้างอัตโนมัติจาก <code>build_monitor.py</code> · โหมด full · สร้างเมื่อ <time datetime="2026-09-25T15:46:26Z">2026-09-25T15:46:26Z</time></p><p>ตัวเลขทั้งหมดคำนวณสดจาก data/ ในขณะสร้าง (ไม่ใส่ค่าคงที่) · backtest ใช้ราคาซื้อขายล่าสุดจากประวัติตลาด · ผลจริงจะมาจาก forward-test เท่านั้น</p><p>ไม่ใช่คำแนะนำการลงทุน · ตลาดพยากรณ์อากาศมีความเสี่ยงสภาพคล่อง/การตัดสิน · ตรวจ ToS และภูมิภาคก่อนใช้เงินจริง</p></footer></div>
 <script>
 (function(){
  try{

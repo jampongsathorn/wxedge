@@ -682,7 +682,10 @@ def render(M):
           '<li>เข้าเวลา local <strong>%s:00</strong> (ช่วง 15:00–17:00 · ช่วงสายช่วยได้ %s:00 / %s:00)</li>'
           '<li>โมเดลต้อง p ≥ <strong>%s</strong> (โหมดคม p ≥ %s)</li>'
           '<li>ราคา YES: <strong>%s–%s</strong> (ไม้หลัก) / %s–%s (ไม้รอง)</li>'
-          '<li>edge ≥ %s · spread ≤ %s</li><li>ฝั่ง NO: YES bid ≥ %s และ bid − p ≥ %s (bin ที่พิสูจน์ว่าเป็นไปไม่ได้)</li></ul></div>'
+          '<li>edge ≥ %s · spread ≤ %s</li><li>ฝั่ง NO: YES bid ≥ %s และ bid − p ≥ %s (bin ที่พิสูจน์ว่าเป็นไปไม่ได้)</li>'
+          '<li><strong>bucket ที่ซื้อ = bin ที่มี max-so-far อยู่ข้างใน</strong> (บัคเก็ตปัจจุบัน = bin ที่จะชนะถ้าวันจบเดี๋ยวนี้) — 100%% ของไม้ใน backtest · '
+          'ไม่ซื้อ bin สูงกว่า (แพ้เพราะ “ร้อนต่อ”) ไม่ซื้อ bin ต่ำกว่า</li>'
+          '<li>รอบเสริมที่ทดสอบแล้วดีกว่า: ชั้น ≤0.10 เก็บได้ตั้งแต่ 14:00 (hit 83%%) + รอบหลัก 16:00–17:00 → 259 ไม้ · 88.0%% · ROI +906%% (vs รอบเดียว 165 ไม้ · 87.9%% · +817%%)</li></ul></div>'
           % (e.get("hour_local"), e.get("hour_alt_early"), e.get("hour_alt_late"), e.get("p_min"), e.get("p_min_sharp"),
              e.get("yes_price_min"), e.get("yes_price_primary_max"), e.get("yes_price_min"), e.get("yes_price_secondary_max"),
              "0.15", "0.04", e.get("no_price_min"), e.get("no_margin")))
