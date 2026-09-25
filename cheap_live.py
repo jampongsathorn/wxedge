@@ -299,7 +299,11 @@ def main():
             if hw_lo <= t.hour <= hw_hi and (UNIV is None or c in UNIV):
                 cities.append(c)
     else:
-        cities = a.cities.split(",")
+        cities = [c.strip() for c in a.cities.split(",") if c.strip()]
+        if not cities:                                  # ส่ง --cities ว่างมา (เช่น workflow_dispatch นอกช่วงเวลา) → ถอยไปใช้ auto
+            cities = [c for c, v in cfgs.items()
+                      if v.get("icao") and hw_lo <= datetime.now(ZoneInfo(v["tz"])).hour <= hw_hi
+                      and (UNIV is None or c in UNIV)]
         if UNIV is not None:
             skipped = [c for c in cities if c not in UNIV]
             if skipped:
