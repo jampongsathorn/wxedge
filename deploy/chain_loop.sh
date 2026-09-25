@@ -69,9 +69,12 @@ git_pull_push() {
 }
 
 write_state
-git add -f "$STATE" 2>/dev/null || true
-git -c user.name=wxedge-bot -c user.email=wxedge-bot@users.noreply.github.com commit -q -m "chain: เริ่มโซ่ถึง $(date -u -d "@$END" +%Y-%m-%dT%H:%MZ) [skip ci]" 2>/dev/null || true
-git push -q origin main 2>/dev/null || true
+if [ "$PUSH" = "1" ] && [ -d .git ]; then
+  git add -f "$STATE" 2>/dev/null || true
+  git -c user.name=wxedge-bot -c user.email=wxedge-bot@users.noreply.github.com \
+      commit -q -m "chain: เริ่มโซ่ถึง $(date -u -d "@$END" +%Y-%m-%dT%H:%MZ) [skip ci]" 2>/dev/null || true
+  git push -q origin main 2>/dev/null || true
+fi
 log "เริ่มโซ่ · จะวนถึง $(date -u -d "@$END" +%Y-%m-%dT%H:%MZ) · ทุก $INTERVAL_MIN นาที · workers $WORKERS"
 
 rounds=0; scans=0; empty=0
@@ -97,8 +100,11 @@ while [ "$(now_epoch)" -lt "$END" ]; do
     rounds=$((rounds + 1)); scans=$((scans + $(echo "$CITIES" | tr ',' '\n' | grep -c .)))
     log "รอบที่ $rounds · โหมด $MODE · $CITIES"
     $PY cheap_live.py --log --workers "$WORKERS" --cities "$CITIES" 2>&1 | tail -3
-    # หน้า monitor อัปเดตเมื่อ KPI เปลี่ยน
-    $PY build_monitor.py --quiet --mode "${MODE_MONITOR:-full}" --skip-if-same --out docs/index.html --json-out docs/monitor.json || true
+    # หน้า monitor อัปเดตเมื่อ KPI เปลี่ยน (log/จักรวาล/bid-ask/เฉลย/รายงาน) — snapshot เปล่า ๆ ไม่ต้อง rebuild Pages
+    git add -f data/cheap_live_log.csv data/universe.json data/bidask_probe.json data/forward_stats.json reports 2>/dev/null || true
+    if ! git diff --cached --quiet; then
+      $PY build_monitor.py --quiet --mode "${MODE_MONITOR:-full}" --skip-if-same --out docs/index.html --json-out docs/monitor.json || true
+    fi
   else
     empty=$((empty + 1))
   fi
