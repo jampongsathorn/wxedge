@@ -45,7 +45,7 @@ jobs:
           python -m pip install --quiet --upgrade pip
           pip install --quiet -r deploy/requirements.txt
 
-      - name: บันทึกไม้ + ราคาจริง (log v3: bid/ask · depth · สถานะ obs · snapshot)
+      - name: "บันทึกไม้ + ราคาจริง (log v3: bid/ask · depth · สถานะ obs · snapshot)"
         if: steps.gate.outputs.run == 'true' || github.event_name == 'workflow_dispatch'
         run: |
           python cheap_live.py --log --hour-window 15-17 --cities "${{ steps.gate.outputs.cities }}"
