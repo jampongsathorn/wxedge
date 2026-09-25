@@ -1,22 +1,23 @@
-# ชุดรัน forward-test ฟรีบน GitHub Actions (v2 — ทุก 30 นาที)
+# ชุดรัน forward-test ฟรีบน GitHub Actions (v3 — ทุก 30 นาที + เผยแพร่หน้า monitor)
 # วางไฟล์นี้ที่  <repo>/.github/workflows/forward-test.yml
 #
 # ทำงาน:
 #   ทุก 30 นาที → gate เช็คว่ามีเมืองถึงเวลาเข้าไม้ไหม (ถ้าไม่มี = จบทันที ไม่เผานาที CI)
-#                ถ้ามี → สแกนเฉพาะเมืองนั้น → บันทึก bid/ask จริง + depth + snapshot การแจกแจง (log v3)
-#   ทุกวัน 03:20 UTC → อัปเดตจักรวาลเมือง + วัดช่องว่าง bid/ask + เติม "เฉลย" ลง log + รายงาน forward
+#                ถ้ามี → สแกนเฉพาะเมืองนั้น → บันทึก bid/ask จริง + depth + snapshot (log v3)
+#   ทุกวัน 03:20 UTC → จักรวาล + bid/ask + เติมเฉลย + รายงาน forward
+#   หลังมีข้อมูลใหม่/รอบรายวัน → สร้างหน้า monitor แล้วเผยแพร่ขึ้น GitHub Pages (ถ้าตั้ง secret MONITOR_PAT)
 #
-# นาที CI: รอบที่มีเมืองจริง ~1-1.5 นาที · รอบเปล่า ~10 วิ → ประมาณ 1,400-1,700 นาที/เดือน (โควตา private = 2,000)
+# นาที CI: รอบมีเมือง ~1-1.5 นาที · รอบเปล่า ~10 วิ → ~1,400-1,700 นาที/เดือน (โควตา private = 2,000)
 name: wxedge-forward-test
 
 on:
   schedule:
-    - cron: "*/30 * * * *"      # ทุก 30 นาที (UTC) — เก็บราคาช่วง 15:00-17:00 local ของแต่ละเมือง
-    - cron: "20 3 * * *"        # รายวัน 03:20 UTC — universe + bid/ask + เฉลย + รายงาน
-  workflow_dispatch:            # กดรันเองได้จากหน้า Actions (รันทันทีไม่สนช่วงเวลา)
+    - cron: "*/30 * * * *"      # ทุก 30 นาที (UTC)
+    - cron: "20 3 * * *"        # รายวัน 03:20 UTC
+  workflow_dispatch:
 
 permissions:
-  contents: write               # ต้องมี เพื่อ commit log กลับเข้า repo
+  contents: write
 
 concurrency:
   group: wxedge-log
@@ -45,7 +46,7 @@ jobs:
           python -m pip install --quiet --upgrade pip
           pip install --quiet -r deploy/requirements.txt
 
-      - name: "บันทึกไม้ + ราคาจริง (log v3: bid/ask · depth · สถานะ obs · snapshot)"
+      - name: "บันทึกไม้ + ราคาจริง (log v3: bid/ask · depth · obs · snapshot)"
         if: steps.gate.outputs.run == 'true' || github.event_name == 'workflow_dispatch'
         run: |
           python cheap_live.py --log --hour-window 15-17 --cities "${{ steps.gate.outputs.cities }}"
@@ -60,6 +61,7 @@ jobs:
           tail -20 reports/forward_report.md || true
 
       - name: commit ข้อมูลกลับเข้า repo (ถ้ามีการเปลี่ยน)
+        id: commit
         if: always() && steps.gate.conclusion == 'success'
         run: |
           git config user.name  "wxedge-bot"
@@ -68,10 +70,24 @@ jobs:
                      data/snapshots reports/bidask_check.md reports/forward_report.md || true
           if git diff --cached --quiet; then
             echo "ไม่มีข้อมูลใหม่"
+            echo "changed=false" >> "$GITHUB_OUTPUT"
           else
             git commit -m "forward-test log $(date -u +'%Y-%m-%dT%H:%MZ') [skip ci]"
             git push
+            echo "changed=true" >> "$GITHUB_OUTPUT"
           fi
+
+      - name: "เผยแพร่หน้า monitor ขึ้น GitHub Pages (ต้องมี secret MONITOR_PAT)"
+        if: always() && (steps.commit.outputs.changed == 'true' || github.event.schedule == '20 3 * * *' || github.event_name == 'workflow_dispatch')
+        env:
+          MONITOR_PAT: ${{ secrets.MONITOR_PAT }}
+          MODE: safe
+        run: |
+          if [ -z "${MONITOR_PAT:-}" ]; then
+            echo "⚠ ยังไม่ได้ตั้ง secret MONITOR_PAT — ข้ามการเผยแพร่ (หน้าเว็บยังสร้างใน docs/index.html)"
+            exit 0
+          fi
+          bash deploy/publish_monitor.sh
 
       - name: สรุปในหน้า Actions
         if: always()

@@ -1,0 +1,321 @@
+<!doctype html><html lang="th">
+<head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#080d18">
+<meta name="description" content="ตัวติดตามกลยุทธ์ตลาดอุณหภูมิสูงสุดบน Polymarket — ผลจริงจาก forward-test, KPI, เป้าหมายก่อนใช้เงินจริง">
+<title>wxedge · ตัวติดตามกลยุทธ์อุณหภูมิสูงสุด</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ctext y='25' font-size='24'%3E%F0%9F%8C%A1%3C/text%3E%3C/svg%3E">
+<style>
+*,*::before,*::after{box-sizing:border-box}
+:root{
+ --bg:#080d18;--panel:#101a2c;--panel2:#0c1424;--line:#1f2c46;--line2:#2a3a5c;
+ --text:#e9effb;--muted:#93a4c4;--muted2:#6f80a0;
+ --green:#4ade80;--blue:#60b8fa;--amber:#fbbf24;--red:#f87171;--violet:#a78bfa;
+ --radius:14px;--fs:15px;
+}
+html{color-scheme:dark;-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--text);font:var(--fs)/1.55 system-ui,-apple-system,"Segoe UI","Noto Sans Thai","Sarabun",Roboto,sans-serif;
+ background-image:radial-gradient(1100px 460px at 12% -6%,#16233d 0%,transparent 62%),radial-gradient(760px 380px at 96% 2%,#14283a 0%,transparent 58%);
+ background-attachment:fixed}
+a{color:var(--blue);text-decoration:none}
+a:hover{text-decoration:underline}
+a:focus-visible,button:focus-visible,summary:focus-visible{outline:2px solid var(--blue);outline-offset:2px;border-radius:6px}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+.skip{position:absolute;left:-9999px;top:0;background:var(--panel);color:var(--text);padding:10px 14px;border-radius:0 0 10px 0;z-index:9}
+.skip:focus{left:0}
+.wrap{max-width:1140px;margin:0 auto;padding:0 16px 56px}
+header.top{position:sticky;top:0;z-index:5;background:rgba(8,13,24,.86);backdrop-filter:blur(10px);border-bottom:1px solid var(--line);
+ padding:calc(10px + env(safe-area-inset-top)) 0 10px}
+.topin{max-width:1140px;margin:0 auto;padding:0 16px;display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+h1{margin:0;font-size:clamp(17px,2.4vw,21px);letter-spacing:-.2px;text-wrap:balance}
+h1 span{color:var(--muted);font-weight:500;font-size:.82em;display:block}
+h2{margin:38px 0 12px;font-size:clamp(16px,2.1vw,19px);text-wrap:balance;scroll-margin-top:76px}
+h3{margin:0 0 8px;font-size:15px}
+p{margin:8px 0;text-wrap:pretty}
+.pill{display:inline-flex;align-items:center;gap:7px;padding:6px 11px;border:1px solid var(--line2);border-radius:999px;background:var(--panel2);font-size:12.5px;color:var(--muted);white-space:nowrap}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 0 3px rgba(74,222,128,.16)}
+.dot.wait{background:var(--amber);box-shadow:0 0 0 3px rgba(251,191,36,.16)}
+.spacer{flex:1}
+.btn{min-height:40px;padding:8px 13px;border:1px solid var(--line2);border-radius:10px;background:var(--panel);font-size:13.5px;transition:background-color .15s,border-color .15s,transform .15s}
+.btn:hover{background:#16223a;border-color:#33507e}
+.btn[aria-pressed="true"]{border-color:var(--blue);color:#dff0ff}
+nav.toc{display:flex;gap:6px;overflow-x:auto;padding:10px 0 4px;scrollbar-width:thin}
+nav.toc a{padding:7px 11px;border:1px solid var(--line);border-radius:999px;font-size:13px;white-space:nowrap;color:var(--muted)}
+nav.toc a:hover{color:var(--text);border-color:var(--line2);text-decoration:none}
+.grid{display:grid;gap:12px}
+.kpis{grid-template-columns:repeat(auto-fit,minmax(215px,1fr))}
+.cards{grid-template-columns:repeat(auto-fit,minmax(290px,1fr))}
+.card{background:linear-gradient(180deg,var(--panel) 0%,var(--panel2) 100%);border:1px solid var(--line);border-radius:var(--radius);padding:14px 15px;content-visibility:auto;contain-intrinsic-size:auto 120px}
+.card h3{color:var(--muted);font-weight:600;font-size:13px;letter-spacing:.2px}
+.kpi{font-size:clamp(21px,3.4vw,27px);font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:-.5px;margin:2px 0 2px}
+.sub{color:var(--muted);font-size:12.5px}
+.pos{color:var(--green)}.neg{color:var(--red)}.amb{color:var(--amber)}.blu{color:var(--blue)}.vio{color:var(--violet)}
+table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums;font-size:13.5px}
+caption{text-align:left;color:var(--muted);font-size:12.5px;padding:0 0 8px}
+th,td{padding:8px 10px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
+th:first-child,td:first-child{text-align:left;white-space:normal}
+thead th{color:var(--muted);font-weight:600;font-size:12.5px;position:sticky;top:0;background:var(--panel)}
+tbody tr:hover{background:#16223a}
+.tblwrap{overflow-x:auto;border:1px solid var(--line);border-radius:var(--radius);background:var(--panel2)}
+.tblwrap table{min-width:520px}
+.chart{width:100%;height:auto;display:block}
+.chart .grid{stroke:#1c2740;stroke-width:1}
+.chart .axis{fill:var(--muted2);font-size:11px;font-variant-numeric:tabular-nums}
+.chart .splitlabel{fill:var(--amber);font-size:11px}
+.chart .split{stroke:var(--amber);stroke-dasharray:4 4;stroke-width:1;opacity:.55}
+.chart .eqline{fill:none;stroke:var(--green);stroke-width:2.2;stroke-linejoin:round;stroke-linecap:round}
+.chart .eqarea{fill:url(#eqg);stroke:none}
+.chart .dot{fill:var(--green);stroke:#080d18;stroke-width:2}
+.chart .bar{fill:var(--blue);opacity:.85}
+.barwrap{margin:12px 0}
+.barlabel{display:flex;justify-content:space-between;gap:10px;font-size:13px;margin-bottom:5px}
+.bnum{font-variant-numeric:tabular-nums;color:var(--muted)}
+.track{height:9px;border-radius:999px;background:#16223a;overflow:hidden}
+.fill{height:100%;border-radius:999px;background:linear-gradient(90deg,var(--blue),#7dd3fc);transition:width .4s ease}
+.fill.good{background:linear-gradient(90deg,var(--green),#86efac)}
+.fill.warn{background:linear-gradient(90deg,var(--amber),#fcd34d)}
+.bartarget{color:var(--muted2);font-size:12px;margin-top:4px}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0 0;padding:0;list-style:none}
+.chip{font-size:12px;padding:5px 9px;border-radius:999px;border:1px solid var(--line2);background:var(--panel2);color:var(--muted)}
+.chip.ok{border-color:#2c6a48;color:#a7f3c9}
+.chip.mid{border-color:#6b5a22;color:#fde68a}
+.chip.bad{border-color:#6b2f2f;color:#fecaca}
+.chip.off{opacity:.55;text-decoration:line-through}
+.gate{display:grid;gap:10px}
+.gate .row{display:flex;gap:10px;align-items:flex-start}
+.mark{width:22px;height:22px;flex:0 0 22px;border-radius:50%;display:grid;place-items:center;font-size:13px;font-weight:700;border:1px solid var(--line2);color:var(--muted)}
+.mark.done{background:rgba(74,222,128,.16);border-color:#2c6a48;color:var(--green)}
+.mark.progress{background:rgba(251,191,36,.14);border-color:#6b5a22;color:var(--amber)}
+.mark.manual{background:rgba(148,163,184,.12)}
+.note{border-left:3px solid var(--line2);padding:10px 12px;background:var(--panel2);border-radius:0 10px 10px 0;color:var(--muted);font-size:13px}
+.warnbox{border-left-color:var(--amber)}
+details{border:1px solid var(--line);border-radius:var(--radius);background:var(--panel2);padding:10px 13px;margin:10px 0}
+summary{cursor:pointer;color:var(--text);font-weight:600;font-size:13.5px}
+details[open] summary{margin-bottom:8px}
+ul.clean{margin:8px 0;padding-left:18px;color:var(--muted)}
+ul.clean li{margin:4px 0}
+.pick{border:1px solid var(--line);border-radius:12px;padding:11px 13px;background:var(--panel2)}
+.pick .pline{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.tag{font-size:11.5px;padding:3px 8px;border-radius:999px;border:1px solid var(--line2);color:var(--muted)}
+.tag.yes{border-color:#2c6a48;color:#a7f3c9}.tag.no{border-color:#4b3a6b;color:#ddd6fe}
+footer{border-top:1px solid var(--line);margin-top:40px;padding:18px 0 calc(24px + env(safe-area-inset-bottom));color:var(--muted2);font-size:12.5px}
+.sr{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+.empty{text-align:center;color:var(--muted);padding:26px 14px;border:1px dashed var(--line2);border-radius:var(--radius);background:var(--panel2)}
+.empty strong{color:var(--text);display:block;margin-bottom:4px;font-size:14.5px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+@media (max-width:640px){:root{--fs:14.5px}.wrap{padding:0 12px 44px}}
+</style>
+</head><body>
+<a class="skip" href="#main">ข้ามไปเนื้อหาหลัก</a>
+<header class="top"><div class="topin">
+<h1>wxedge · ตัวติดตามกลยุทธ์<span>ตลาด “อุณหภูมิสูงสุดของวัน” บน Polymarket — ข้อมูลจริง ไม่ใช่การเดา</span></h1>
+<div class="spacer"></div>
+<span class="pill"><span class="dot wait" aria-hidden="true"></span>เริ่มเก็บแล้ว · ยังไม่มีไม้เข้าเกณฑ์</span>
+<button class="btn" id="refreshBtn" type="button" aria-label="โหลดข้อมูลใหม่">↻ โหลดใหม่</button>
+<button class="btn" id="autoBtn" type="button" aria-pressed="true" aria-label="สลับการอัปเดตอัตโนมัติทุก 15 นาที">อัปเดตอัตโนมัติ: เปิด</button>
+</div><nav class="toc topin" aria-label="สารบัญ"><a href="#goals">เป้าหมาย</a><a href="#kpi">KPI</a><a href="#forward">Forward-test</a><a href="#backtest">Backtest</a><a href="#model">โมเดล</a><a href="#rules">กติกา</a><a href="#pipeline">รอบงาน</a></nav></header>
+<div class="wrap"><main id="main">
+<section id="goals" aria-labelledby="goalsH"><h2 id="goalsH">เป้าหมายก่อนใช้เงินจริง</h2>
+<div class="cards grid">
+<div class="card"><h3>ความคืบหน้า 5 ข้อ</h3><div class="gate">
+<div class="row"><span class="mark done" aria-hidden="true">✓</span><div><strong>1. หลักฐาน backtest</strong><div class="sub">379 ไม้ · 93.9% ชนะ · $201,884</div><div class="sub" style="color:var(--muted2)">พิสูจน์ที่มาได้ทีละไม้ (pnl_proof 5 ชั้น ผ่านหมด)</div></div></div>
+<div class="row"><span class="mark progress" aria-hidden="true">…</span><div><strong>2. หลักฐาน bid/ask จริง</strong><div class="sub">วัดได้ 140 bins (ask−last median 0.0060)</div><div class="sub" style="color:var(--muted2)">ต้องมี log ตอน 16:00 local + depth จริง (log v3 เก็บแล้ว)</div></div></div>
+<div class="row"><span class="mark progress" aria-hidden="true">…</span><div><strong>3. forward-test จริง ≥ 50 ไม้ · ชนะ ≥ 85%</strong><div class="sub">0/50 ไม้ settled</div><div class="sub" style="color:var(--muted2)">เก็บจากตลาดจริงด้วยราคาที่จ่ายจริง</div></div></div>
+<div class="row"><span class="mark manual" aria-hidden="true">?</span><div><strong>4. เงินทุน ≥ min-cap + 20%</strong><div class="sub">ต้องยืนยันเอง (min-cap ≈ $959 จากไม้ที่แพงสุด → เป้า ~$1,200)</div><div class="sub" style="color:var(--muted2)">กัน drawdown 15% ของแผน sizing</div></div></div>
+<div class="row"><span class="mark manual" aria-hidden="true">?</span><div><strong>5. บัญชีเทรดพร้อม</strong><div class="sub">ต้องยืนยันเอง (Polymarket + USDC บน Polygon + ภูมิภาคที่ใช้ได้)</div><div class="sub" style="color:var(--muted2)">เช็ค ToS/ภูมิภาคก่อนฝากเงิน</div></div></div>
+</div></div>
+<div class="card"><h3>ไม้จริงที่ต้องเก็บ (เป้า 50)</h3>
+<div class="barwrap"><div class="barlabel"><span>settled แล้ว</span><span class="bnum">0 / 50</span></div><div class="track" role="progressbar" aria-label="settled แล้ว" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"><div class="fill " style="width:0.0%"></div></div><div class="bartarget">เป้า: settle แล้วนับอัตโนมัติจาก forward_resolve.py</div></div>
+<div class="barwrap"><div class="barlabel"><span>อัตราชนะจริง</span><span class="bnum">ยังไม่มีไม้ settled</span></div><div class="track" role="progressbar" aria-label="อัตราชนะจริง" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"><div class="fill warn" style="width:0.0%"></div></div><div class="bartarget">เป้า: ต้อง ≥ 85% ตอนครบ 50 ไม้</div></div>
+<div class="barwrap"><div class="barlabel"><span>ข้อมูลดิบที่เก็บได้</span><span class="bnum">5 snapshot (เมือง×รอบ)</span></div><div class="track" role="progressbar" aria-label="ข้อมูลดิบที่เก็บได้" aria-valuenow="2" aria-valuemin="0" aria-valuemax="100"><div class="fill " style="width:2.5%"></div></div><div class="bartarget">เป้า: เป้า 200 = 33 เมือง × ~2 วันครึ่ง</div></div>
+</div>
+<div class="card"><h3>สถานะ pipeline</h3>
+<p class="sub">รอบถัดไป: <strong id="nextRun">—</strong></p>
+<p class="sub">log เริ่มเก็บ: <time datetime="2026-09-25T13:03:17Z">—</time></p>
+<p class="sub">สร้างหน้านี้: <time datetime="2026-09-25T13:03:17Z">2026-09-25T13:03:17Z</time></p>
+<p class="sub" id="live" aria-live="polite">ข้อมูลฝังในหน้า ณ เวลาที่สร้าง — กด “โหลดใหม่” เพื่อดึงล่าสุด</p>
+</div></div></section>
+<section id="kpi" aria-labelledby="kpiH"><h2 id="kpiH">KPI หลัก</h2><div class="grid kpis">
+<div class="card"><h3>ไม้จริง (settled)</h3><div class="kpi ">0</div><div class="sub">จาก log v3 · 0 แถวทั้งหมด (รวมที่รอเฉลย)</div></div>
+<div class="card"><h3>อัตราชนะจริง</h3><div class="kpi amb">—</div><div class="sub">YES — · NO —</div></div>
+<div class="card"><h3>Backtest PnL (หลักฐาน)</h3><div class="kpi pos">$201,884</div><div class="sub">379 ไม้ · ชนะ 93.9% · ROI +533% · stake $100</div></div>
+<div class="card"><h3>Drawdown สูงสุด (backtest)</h3><div class="kpi">$200</div><div class="sub">0.53% ของเงินที่วางทั้งหมด · ไม้แพ้ติดกันสูงสุด 2</div></div>
+<div class="card"><h3>ช่องว่าง ask−last (วัดจริง)</h3><div class="kpi">0.0060</div><div class="sub">median จาก 140 bins · spread median 0.0100<br>วัดเมื่อ <time datetime="2026-09-25T01:47:19.498363Z">2026-09-25</time></div></div>
+<div class="card"><h3>Brier score (ความน่าเชื่อถือ p)</h3><div class="kpi">—</div><div class="sub">จากไม้ settled ที่มี model_p · ยิ่งต่ำยิ่งดี (0.25 = เดาสุ่ม)</div></div>
+</div></section>
+<section id="forward" aria-labelledby="fwH"><h2 id="fwH">Forward-test — ผลจริงจากตลาด</h2>
+<div class="empty"><strong>ยังไม่มีไม้เข้าเกณฑ์</strong>
+ระบบเก็บข้อมูลทุก 30 นาทีแล้ว — ไม้จะปรากฏที่นี่เมื่อมี bin ที่ราคา ≤ 0.25 · p โมเดล ≥ 0.90 · edge ≥ 0.15 · spread ≤ 0.04 (หรือฝั่ง NO: bin ที่พิสูจน์แล้วว่าเป็นไปไม่ได้) และจะได้ “เฉลย” หลังตลาดปิดในเช้าวันถัดไป</div>
+<h3 style="margin-top:16px">ความครอบคลุมของข้อมูลที่เก็บ</h3>
+<div class="tblwrap"><table><caption>snapshot การแจกแจง + ราคาทุก bin (ใช้ทำ calibration/PIT)</caption><thead><tr><th scope="col">วัน</th><th scope="col">เมือง×รอบ</th></tr></thead><tbody>
+<tr><td><time datetime="2026-09-25T00:00:00Z" data-dateonly="1">2026-09-25</time></td><td>5</td></tr>
+</tbody></table></div>
+</section>
+<section id="backtest" aria-labelledby="btH"><h2 id="btH">Backtest — หลักฐาน 379 ไม้</h2>
+<div class="card"><svg viewBox="0 0 760 250" class="chart" role="img" aria-labelledby="eqT eqD" preserveAspectRatio="xMidYMid meet"><title id="eqT">Equity curve ของ backtest 379 ไม้</title><desc id="eqD">กำไรสะสมจาก 379 ไม้ เรียงตามวันที่ (stake $100/ไม้) · สิ้นสุดที่ $201,884 · drawdown สูงสุด $200</desc><defs><linearGradient id="eqg" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#4ade80" stop-opacity="0.38"/><stop offset="100%" stop-color="#4ade80" stop-opacity="0.02"/></linearGradient></defs><line x1="62" y1="220.0" x2="746" y2="220.0" class="grid"/><text x="55" y="223.5" class="axis" text-anchor="end">$0</text><line x1="62" y1="123.8" x2="746" y2="123.8" class="grid"/><text x="55" y="127.3" class="axis" text-anchor="end">$100,000</text><line x1="62" y1="27.6" x2="746" y2="27.6" class="grid"/><text x="55" y="31.1" class="axis" text-anchor="end">$200,000</text><path d="M62.0,219.9 L63.8,219.8 L65.6,219.4 L67.4,218.9 L69.2,218.7 L71.0,217.6 L72.9,217.5 L74.7,217.3 L76.5,216.5 L78.3,215.9 L80.1,215.4 L81.9,214.7 L83.7,214.8 L85.5,214.1 L87.3,213.9 L89.1,210.8 L91.0,210.6 L92.8,210.2 L94.6,210.1 L96.4,208.4 L98.2,208.3 L100.0,207.9 L101.8,207.8 L103.6,207.4 L105.4,207.0 L107.2,206.4 L109.0,205.9 L110.9,205.8 L112.7,204.5 L114.5,204.3 L116.3,204.4 L118.1,204.2 L119.9,203.9 L121.7,203.7 L123.5,203.6 L125.3,202.8 L127.1,202.6 L129.0,202.2 L130.8,202.1 L132.6,201.9 L134.4,201.3 L136.2,201.4 L138.0,201.1 L139.8,201.2 L141.6,201.0 L143.4,201.1 L145.2,199.9 L147.0,198.9 L148.9,198.5 L150.7,198.3 L152.5,196.0 L154.3,195.1 L156.1,195.0 L157.9,194.9 L159.7,193.6 L161.5,193.3 L163.3,192.9 L165.1,192.8 L167.0,192.6 L168.8,191.6 L170.6,191.5 L172.4,191.1 L174.2,190.9 L176.0,190.8 L177.8,190.5 L179.6,190.0 L181.4,189.3 L183.2,189.1 L185.0,189.0 L186.9,188.8 L188.7,187.1 L190.5,186.3 L192.3,185.5 L194.1,185.1 L195.9,184.8 L197.7,183.4 L199.5,181.7 L201.3,180.7 L203.1,180.6 L205.0,177.5 L206.8,177.4 L208.6,177.0 L210.4,176.6 L212.2,176.4 L214.0,176.3 L215.8,176.2 L217.6,175.5 L219.4,175.2 L221.2,174.8 L223.0,172.2 L224.9,170.8 L226.7,168.7 L228.5,165.6 L230.3,165.4 L232.1,165.3 L233.9,164.7 L235.7,163.3 L237.5,162.3 L239.3,162.2 L241.1,161.9 L243.0,161.6 L244.8,160.9 L246.6,160.6 L248.4,160.3 L250.2,159.9 L252.0,159.4 L253.8,159.2 L255.6,158.9 L257.4,158.5 L259.2,156.8 L261.0,156.2 L262.9,154.6 L264.7,153.4 L266.5,153.3 L268.3,153.0 L270.1,152.6 L271.9,152.3 L273.7,152.0 L275.5,151.9 L277.3,150.8 L279.1,149.9 L281.0,148.9 L282.8,148.7 L284.6,148.3 L286.4,147.9 L288.2,147.7 L290.0,146.4 L291.8,145.5 L293.6,145.4 L295.4,145.1 L297.2,145.0 L299.0,144.6 L300.9,144.3 L302.7,144.0 L304.5,143.6 L306.3,143.4 L308.1,143.1 L309.9,143.0 L311.7,143.1 L313.5,143.0 L315.3,143.1 L317.1,142.9 L319.0,143.0 L320.8,142.8 L322.6,142.6 L324.4,142.5 L326.2,142.3 L328.0,142.2 L329.8,141.8 L331.6,139.1 L333.4,138.8 L335.2,138.7 L337.0,138.3 L338.9,138.2 L340.7,137.3 L342.5,136.8 L344.3,136.4 L346.1,136.2 L347.9,135.5 L349.7,134.0 L351.5,133.6 L353.3,133.5 L355.1,133.3 L357.0,130.4 L358.8,130.0 L360.6,129.9 L362.4,129.7 L364.2,127.7 L366.0,127.5 L367.8,127.1 L369.6,126.7 L371.4,126.6 L373.2,125.4 L375.0,125.3 L376.9,125.4 L378.7,125.5 L380.5,125.3 L382.3,124.6 L384.1,123.8 L385.9,123.7 L387.7,123.4 L389.5,123.2 L391.3,122.2 L393.1,121.9 L395.0,121.6 L396.8,121.2 L398.6,121.1 L400.4,120.8 L402.2,120.3 L404.0,120.2 L405.8,120.0 L407.6,119.4 L409.4,119.2 L411.2,118.8 L413.0,118.7 L414.9,118.5 L416.7,118.3 L418.5,118.2 L420.3,117.8 L422.1,116.9 L423.9,116.8 L425.7,116.6 L427.5,116.6 L429.3,116.6 L431.1,116.7 L433.0,116.6 L434.8,116.3 L436.6,116.1 L438.4,115.8 L440.2,115.3 L442.0,114.9 L443.8,114.5 L445.6,114.4 L447.4,114.5 L449.2,113.1 L451.0,112.6 L452.9,112.5 L454.7,112.3 L456.5,111.7 L458.3,111.2 L460.1,110.2 L461.9,109.8 L463.7,109.7 L465.5,109.5 L467.3,108.9 L469.1,108.8 L471.0,108.9 L472.8,108.8 L474.6,108.9 L476.4,108.3 L478.2,108.2 L480.0,108.0 L481.8,104.9 L483.6,102.6 L485.4,101.1 L487.2,98.4 L489.0,98.2 L490.9,97.9 L492.7,96.7 L494.5,96.8 L496.3,93.5 L498.1,93.2 L499.9,93.1 L501.7,93.1 L503.5,93.0 L505.3,92.9 L507.1,92.0 L509.0,91.8 L510.8,88.8 L512.6,88.6 L514.4,88.4 L516.2,88.2 L518.0,88.1 L519.8,88.2 L521.6,87.8 L523.4,87.1 L525.2,86.8 L527.0,86.7 L528.9,86.4 L530.7,85.9 L532.5,85.8 L534.3,85.2 L536.1,84.0 L537.9,84.1 L539.7,84.0 L541.5,83.5 L543.3,83.0 L545.1,82.9 L547.0,82.8 L548.8,82.5 L550.6,81.1 L552.4,80.8 L554.2,80.4 L556.0,80.3 L557.8,80.2 L559.6,80.1 L561.4,79.6 L563.2,79.0 L565.0,78.4 L566.9,78.3 L568.7,76.9 L570.5,76.8 L572.3,76.7 L574.1,76.6 L575.9,76.7 L577.7,76.5 L579.5,76.4 L581.3,75.0 L583.1,73.2 L585.0,72.7 L586.8,71.8 L588.6,71.3 L590.4,71.0 L592.2,70.8 L594.0,70.7 L595.8,70.8 L597.6,70.6 L599.4,70.0 L601.2,68.2 L603.0,68.1 L604.9,68.0 L606.7,67.5 L608.5,66.9 L610.3,66.1 L612.1,65.9 L613.9,65.4 L615.7,65.5 L617.5,65.4 L619.3,65.3 L621.1,64.6 L623.0,64.4 L624.8,64.0 L626.6,63.7 L628.4,63.3 L630.2,63.0 L632.0,62.5 L633.8,62.4 L635.6,62.0 L637.4,60.3 L639.2,60.4 L641.0,60.2 L642.9,60.0 L644.7,56.9 L646.5,56.8 L648.3,56.6 L650.1,56.4 L651.9,56.1 L653.7,56.0 L655.5,55.7 L657.3,54.3 L659.1,54.2 L661.0,53.4 L662.8,53.1 L664.6,52.9 L666.4,52.8 L668.2,51.3 L670.0,49.6 L671.8,49.4 L673.6,49.0 L675.4,48.8 L677.2,48.6 L679.0,48.4 L680.9,48.0 L682.7,47.4 L684.5,46.6 L686.3,46.3 L688.1,46.0 L689.9,45.9 L691.7,45.4 L693.5,44.7 L695.3,44.5 L697.1,44.0 L699.0,43.8 L700.8,41.5 L702.6,40.6 L704.4,39.6 L706.2,39.5 L708.0,39.1 L709.8,39.0 L711.6,38.5 L713.4,37.9 L715.2,37.8 L717.0,36.9 L718.9,34.9 L720.7,34.7 L722.5,34.0 L724.3,33.9 L726.1,33.6 L727.9,32.8 L729.7,32.3 L731.5,31.5 L733.3,31.4 L735.1,31.2 L737.0,31.1 L738.8,30.6 L740.6,30.2 L742.4,27.7 L744.2,26.7 L746.0,25.8 L746.0,220.0 L62.0,220.0 Z" class="eqarea"/><path d="M62.0,219.9 L63.8,219.8 L65.6,219.4 L67.4,218.9 L69.2,218.7 L71.0,217.6 L72.9,217.5 L74.7,217.3 L76.5,216.5 L78.3,215.9 L80.1,215.4 L81.9,214.7 L83.7,214.8 L85.5,214.1 L87.3,213.9 L89.1,210.8 L91.0,210.6 L92.8,210.2 L94.6,210.1 L96.4,208.4 L98.2,208.3 L100.0,207.9 L101.8,207.8 L103.6,207.4 L105.4,207.0 L107.2,206.4 L109.0,205.9 L110.9,205.8 L112.7,204.5 L114.5,204.3 L116.3,204.4 L118.1,204.2 L119.9,203.9 L121.7,203.7 L123.5,203.6 L125.3,202.8 L127.1,202.6 L129.0,202.2 L130.8,202.1 L132.6,201.9 L134.4,201.3 L136.2,201.4 L138.0,201.1 L139.8,201.2 L141.6,201.0 L143.4,201.1 L145.2,199.9 L147.0,198.9 L148.9,198.5 L150.7,198.3 L152.5,196.0 L154.3,195.1 L156.1,195.0 L157.9,194.9 L159.7,193.6 L161.5,193.3 L163.3,192.9 L165.1,192.8 L167.0,192.6 L168.8,191.6 L170.6,191.5 L172.4,191.1 L174.2,190.9 L176.0,190.8 L177.8,190.5 L179.6,190.0 L181.4,189.3 L183.2,189.1 L185.0,189.0 L186.9,188.8 L188.7,187.1 L190.5,186.3 L192.3,185.5 L194.1,185.1 L195.9,184.8 L197.7,183.4 L199.5,181.7 L201.3,180.7 L203.1,180.6 L205.0,177.5 L206.8,177.4 L208.6,177.0 L210.4,176.6 L212.2,176.4 L214.0,176.3 L215.8,176.2 L217.6,175.5 L219.4,175.2 L221.2,174.8 L223.0,172.2 L224.9,170.8 L226.7,168.7 L228.5,165.6 L230.3,165.4 L232.1,165.3 L233.9,164.7 L235.7,163.3 L237.5,162.3 L239.3,162.2 L241.1,161.9 L243.0,161.6 L244.8,160.9 L246.6,160.6 L248.4,160.3 L250.2,159.9 L252.0,159.4 L253.8,159.2 L255.6,158.9 L257.4,158.5 L259.2,156.8 L261.0,156.2 L262.9,154.6 L264.7,153.4 L266.5,153.3 L268.3,153.0 L270.1,152.6 L271.9,152.3 L273.7,152.0 L275.5,151.9 L277.3,150.8 L279.1,149.9 L281.0,148.9 L282.8,148.7 L284.6,148.3 L286.4,147.9 L288.2,147.7 L290.0,146.4 L291.8,145.5 L293.6,145.4 L295.4,145.1 L297.2,145.0 L299.0,144.6 L300.9,144.3 L302.7,144.0 L304.5,143.6 L306.3,143.4 L308.1,143.1 L309.9,143.0 L311.7,143.1 L313.5,143.0 L315.3,143.1 L317.1,142.9 L319.0,143.0 L320.8,142.8 L322.6,142.6 L324.4,142.5 L326.2,142.3 L328.0,142.2 L329.8,141.8 L331.6,139.1 L333.4,138.8 L335.2,138.7 L337.0,138.3 L338.9,138.2 L340.7,137.3 L342.5,136.8 L344.3,136.4 L346.1,136.2 L347.9,135.5 L349.7,134.0 L351.5,133.6 L353.3,133.5 L355.1,133.3 L357.0,130.4 L358.8,130.0 L360.6,129.9 L362.4,129.7 L364.2,127.7 L366.0,127.5 L367.8,127.1 L369.6,126.7 L371.4,126.6 L373.2,125.4 L375.0,125.3 L376.9,125.4 L378.7,125.5 L380.5,125.3 L382.3,124.6 L384.1,123.8 L385.9,123.7 L387.7,123.4 L389.5,123.2 L391.3,122.2 L393.1,121.9 L395.0,121.6 L396.8,121.2 L398.6,121.1 L400.4,120.8 L402.2,120.3 L404.0,120.2 L405.8,120.0 L407.6,119.4 L409.4,119.2 L411.2,118.8 L413.0,118.7 L414.9,118.5 L416.7,118.3 L418.5,118.2 L420.3,117.8 L422.1,116.9 L423.9,116.8 L425.7,116.6 L427.5,116.6 L429.3,116.6 L431.1,116.7 L433.0,116.6 L434.8,116.3 L436.6,116.1 L438.4,115.8 L440.2,115.3 L442.0,114.9 L443.8,114.5 L445.6,114.4 L447.4,114.5 L449.2,113.1 L451.0,112.6 L452.9,112.5 L454.7,112.3 L456.5,111.7 L458.3,111.2 L460.1,110.2 L461.9,109.8 L463.7,109.7 L465.5,109.5 L467.3,108.9 L469.1,108.8 L471.0,108.9 L472.8,108.8 L474.6,108.9 L476.4,108.3 L478.2,108.2 L480.0,108.0 L481.8,104.9 L483.6,102.6 L485.4,101.1 L487.2,98.4 L489.0,98.2 L490.9,97.9 L492.7,96.7 L494.5,96.8 L496.3,93.5 L498.1,93.2 L499.9,93.1 L501.7,93.1 L503.5,93.0 L505.3,92.9 L507.1,92.0 L509.0,91.8 L510.8,88.8 L512.6,88.6 L514.4,88.4 L516.2,88.2 L518.0,88.1 L519.8,88.2 L521.6,87.8 L523.4,87.1 L525.2,86.8 L527.0,86.7 L528.9,86.4 L530.7,85.9 L532.5,85.8 L534.3,85.2 L536.1,84.0 L537.9,84.1 L539.7,84.0 L541.5,83.5 L543.3,83.0 L545.1,82.9 L547.0,82.8 L548.8,82.5 L550.6,81.1 L552.4,80.8 L554.2,80.4 L556.0,80.3 L557.8,80.2 L559.6,80.1 L561.4,79.6 L563.2,79.0 L565.0,78.4 L566.9,78.3 L568.7,76.9 L570.5,76.8 L572.3,76.7 L574.1,76.6 L575.9,76.7 L577.7,76.5 L579.5,76.4 L581.3,75.0 L583.1,73.2 L585.0,72.7 L586.8,71.8 L588.6,71.3 L590.4,71.0 L592.2,70.8 L594.0,70.7 L595.8,70.8 L597.6,70.6 L599.4,70.0 L601.2,68.2 L603.0,68.1 L604.9,68.0 L606.7,67.5 L608.5,66.9 L610.3,66.1 L612.1,65.9 L613.9,65.4 L615.7,65.5 L617.5,65.4 L619.3,65.3 L621.1,64.6 L623.0,64.4 L624.8,64.0 L626.6,63.7 L628.4,63.3 L630.2,63.0 L632.0,62.5 L633.8,62.4 L635.6,62.0 L637.4,60.3 L639.2,60.4 L641.0,60.2 L642.9,60.0 L644.7,56.9 L646.5,56.8 L648.3,56.6 L650.1,56.4 L651.9,56.1 L653.7,56.0 L655.5,55.7 L657.3,54.3 L659.1,54.2 L661.0,53.4 L662.8,53.1 L664.6,52.9 L666.4,52.8 L668.2,51.3 L670.0,49.6 L671.8,49.4 L673.6,49.0 L675.4,48.8 L677.2,48.6 L679.0,48.4 L680.9,48.0 L682.7,47.4 L684.5,46.6 L686.3,46.3 L688.1,46.0 L689.9,45.9 L691.7,45.4 L693.5,44.7 L695.3,44.5 L697.1,44.0 L699.0,43.8 L700.8,41.5 L702.6,40.6 L704.4,39.6 L706.2,39.5 L708.0,39.1 L709.8,39.0 L711.6,38.5 L713.4,37.9 L715.2,37.8 L717.0,36.9 L718.9,34.9 L720.7,34.7 L722.5,34.0 L724.3,33.9 L726.1,33.6 L727.9,32.8 L729.7,32.3 L731.5,31.5 L733.3,31.4 L735.1,31.2 L737.0,31.1 L738.8,30.6 L740.6,30.2 L742.4,27.7 L744.2,26.7 L746.0,25.8" class="eqline"/><line x1="476.4" y1="18" x2="476.4" y2="220" class="split"/><text x="482.4" y="30" class="axis splitlabel">train │ test</text><circle cx="746.0" cy="25.8" r="4" class="dot"/><text x="62" y="242" class="axis" text-anchor="start">1 ก.ค.</text><text x="746" y="242" class="axis" text-anchor="end">22 ก.ย.</text></svg><p class="sub">กำไรสะสมจากไม้ที่แนะนำทั้งหมด เรียงตามวันที่ · เส้นประ = จุดแบ่ง train/test (2026-08-15) · ยังไม่หักช่องว่าง ask — ดูแถว stress ด้านล่าง</p></div>
+<h3 style="margin-top:16px">แยกตามฝั่งและชั้นไม้</h3><div class="tblwrap"><table><caption>ไม้ที่แนะนำทั้งหมด (stake $100/ไม้ · ถือถึงเฉลย)</caption><thead><tr><th scope="col">กลุ่ม</th><th scope="col">ไม้</th><th scope="col">ชนะ</th><th scope="col">อัตราชนะ</th><th scope="col">PnL</th><th scope="col">สัดส่วนกำไร</th></tr></thead><tbody>
+<tr><td>รวมทั้งหมด</td><td>379</td><td>356</td><td>93.9%</td><td class="pos">+$201,884</td><td>100.0%</td></tr>
+</tbody></table></div>
+<h3 style="margin-top:16px">Stress: ถ้าจ่ายแพงกว่าราคาที่บันทึก</h3><div class="tblwrap"><table><caption>คิดใหม่หลังหักช่องว่าง ask ที่วัดได้ (แหล่ง: reports/bidask_check.md)</caption><thead><tr><th scope="col">สมมติฐานต้นทุน</th><th scope="col">PnL</th><th scope="col">เทียบฐาน</th></tr></thead><tbody>
+<tr><td>+ median ที่วัดได้ (+0.0060)</td><td class="pos">+$185,070</td><td class="neg">$-16,814</td></tr>
+<tr><td>+ p90 ที่วัดได้ (+0.0200)</td><td class="pos">+$156,467</td><td class="neg">$-45,417</td></tr>
+<tr><td>+ 3 ticks (0.03)</td><td class="pos">+$141,455</td><td class="neg">$-60,429</td></tr>
+</tbody></table></div>
+<div class="grid cards" style="margin-top:16px">
+<div class="card"><h3>Train (227 ไม้)</h3><div class="kpi pos">$115,478</div><div class="sub">ชนะ 93.8% · ROI +281%</div></div>
+<div class="card"><h3>Test (152 ไม้ · ไม่เคยเห็นตอนตั้งกติกา)</h3><div class="kpi pos">$86,405</div><div class="sub">ชนะ 94.1% · ROI +284%</div></div>
+<div class="card"><h3>ป้ายกำกับสำคัญ</h3><p class="sub">ตัวเลข backtest ใช้ “ราคาซื้อขายล่าสุด” จากประวัติตลาด · ราคาที่จ่ายจริงคือ ask ซึ่งแพงกว่า → ดู stress · สิ่งที่จะยืนยันของจริงคือ forward-test ด้านบน</p></div>
+</div></section>
+<section id="model" aria-labelledby="mdH"><h2 id="mdH">โมเดล &amp; จักรวาลเมือง</h2><div class="grid cards">
+<div class="card"><h3>แหล่งพยากรณ์</h3><div class="kpi">11</div><div class="sub">รวมแบบ median_after_per_model_bias (หัก bias ต่อโมเดลก่อน)</div>
+<div class="sub" style="margin-top:8px">ecmwf_ifs025, gfs_seamless, icon_seamless, gem_seamless, meteofrance_seamless, jma_seamless, ukmo_seamless, ecmwf_aifs025_single, best_match, ncep_nbm_conus, ncep_hrrr_conus</div></div>
+<div class="card"><h3>ความแม่นที่วัดได้</h3><div class="kpi">σ 1.219°C</div><div class="sub">MAE 0.856°C · σ 0.996°F · MAE 0.773°F</div><div class="sub">ใช้ป้อนการแจกแจงความน่าจะเป็นต่อ bin</div></div>
+<div class="card"><h3>จักรวาลที่ใช้จริง</h3><div class="kpi">33 เมือง</div><div class="sub">เกณฑ์: obs ตกใน bin ที่ตลาดตัดสิน ≥ 90% (จากข้อมูลจริง · อัปเดต <time datetime="2026-09-25T12:58:52Z">2026-09-25</time>)</div></div>
+</div>
+<h3 style="margin-top:16px">agreement รายเมือง (ยิ่งสูง = obs ของเราตรงกับแหล่งตัดสินของตลาด)</h3>
+<ul class="chips" aria-label="เมืองที่ใช้และค่า agreement">
+<li class="chip mid">amsterdam · 93%</li>
+<li class="chip ok">atlanta · 96%</li>
+<li class="chip ok">austin · 100%</li>
+<li class="chip ok">buenos-aires · 100%</li>
+<li class="chip ok">busan · 99%</li>
+<li class="chip ok">cape-town · 98%</li>
+<li class="chip ok">chengdu · 100%</li>
+<li class="chip ok">chicago · 96%</li>
+<li class="chip ok">chongqing · 100%</li>
+<li class="chip ok">dallas · 100%</li>
+<li class="chip ok">denver · 99%</li>
+<li class="chip ok">houston · 100%</li>
+<li class="chip mid">istanbul · 90%</li>
+<li class="chip ok">jeddah · 100%</li>
+<li class="chip mid">kuala-lumpur · 90%</li>
+<li class="chip ok">los-angeles · 99%</li>
+<li class="chip mid">lucknow · 92%</li>
+<li class="chip mid">madrid · 92%</li>
+<li class="chip ok">manila · 99%</li>
+<li class="chip mid">mexico-city · 93%</li>
+<li class="chip ok">miami · 98%</li>
+<li class="chip mid">milan · 93%</li>
+<li class="chip ok">nyc · 98%</li>
+<li class="chip ok">panama-city · 95%</li>
+<li class="chip ok">qingdao · 99%</li>
+<li class="chip ok">san-francisco · 99%</li>
+<li class="chip ok">sao-paulo · 100%</li>
+<li class="chip ok">seattle · 99%</li>
+<li class="chip mid">shanghai · 90%</li>
+<li class="chip mid">tel-aviv · 93%</li>
+<li class="chip ok">toronto · 98%</li>
+<li class="chip mid">wellington · 94%</li>
+<li class="chip ok">wuhan · 100%</li>
+</ul>
+<details><summary>เมืองที่ตัดออก (17) — obs ของเราไม่ตรงกับแหล่งตัดสินของตลาด</summary><ul class="chips">
+<li class="chip off">ankara · 86%</li>
+<li class="chip off">beijing · 84%</li>
+<li class="chip off">guangzhou · 79%</li>
+<li class="chip off">helsinki · 83%</li>
+<li class="chip off">hong-kong · 51%</li>
+<li class="chip off">jinan · 67%</li>
+<li class="chip off">karachi · 86%</li>
+<li class="chip off">london · 87%</li>
+<li class="chip off">moscow · 83%</li>
+<li class="chip off">munich · 81%</li>
+<li class="chip off">paris · 83%</li>
+<li class="chip off">seoul · 83%</li>
+<li class="chip off">shenzhen · 52%</li>
+<li class="chip off">singapore · 86%</li>
+<li class="chip off">taipei · 88%</li>
+<li class="chip off">tokyo · 84%</li>
+<li class="chip off">warsaw · 89%</li>
+</ul><p class="sub">ห้ามเทรดเมืองเหล่านี้ต่อให้โมเดลแม่น — ต่อให้ทายถูกลม ก็แพ้ตอนตัดสิน (เช่น hong-kong 51%)</p></details>
+<details><summary>Bias ต่อโมเดล (°C / °F) — หักออกก่อนรวม</summary><div class="tblwrap"><table><thead><tr><th scope="col">โมเดล</th><th scope="col">bias</th></tr></thead><tbody>
+<tr><td>best_match|C</td><td>-0.328</td></tr>
+<tr><td>best_match|F</td><td>0.097</td></tr>
+<tr><td>ecmwf_aifs025_single|C</td><td>-1.082</td></tr>
+<tr><td>ecmwf_aifs025_single|F</td><td>-1.059</td></tr>
+<tr><td>ecmwf_ifs025|C</td><td>-0.428</td></tr>
+<tr><td>ecmwf_ifs025|F</td><td>0.156</td></tr>
+<tr><td>gem_seamless|C</td><td>-0.432</td></tr>
+<tr><td>gem_seamless|F</td><td>-0.202</td></tr>
+<tr><td>gfs_seamless|C</td><td>-0.241</td></tr>
+<tr><td>gfs_seamless|F</td><td>0.097</td></tr>
+<tr><td>icon_seamless|C</td><td>-0.450</td></tr>
+<tr><td>icon_seamless|F</td><td>-0.177</td></tr>
+<tr><td>jma_seamless|C</td><td>-1.857</td></tr>
+<tr><td>jma_seamless|F</td><td>-1.485</td></tr>
+<tr><td>meteofrance_seamless|C</td><td>-0.542</td></tr>
+<tr><td>meteofrance_seamless|F</td><td>-0.434</td></tr>
+<tr><td>ncep_hrrr_conus|C</td><td>-0.024</td></tr>
+<tr><td>ncep_hrrr_conus|F</td><td>0.097</td></tr>
+<tr><td>ncep_nbm_conus|C</td><td>0.393</td></tr>
+<tr><td>ncep_nbm_conus|F</td><td>-0.533</td></tr>
+<tr><td>ukmo_seamless|C</td><td>-0.291</td></tr>
+<tr><td>ukmo_seamless|F</td><td>0.091</td></tr>
+</tbody></table></div></details>
+</section>
+<section id="rules" aria-labelledby="rlH"><h2 id="rlH">กติกาที่ล็อกไว้</h2><div class="grid cards">
+<div class="card"><h3>จังหวะเข้าไม้</h3><p class="sub">เข้าเมื่อเวลา local ของเมืองนั้นถึงชั่วโมงตัดสินใจ (ช่วง 15:00–17:00) แล้วค่อยเลือก bin เดียวจากความน่าจะเป็นสูงสุด · ถือถึงเฉลย ไม่ขายทำกำไรระหว่างทาง</p><p class="sub" style="color:var(--muted2)">โหมดสาธารณะ: ซ่อนตัวเลขเกณฑ์ (ราคา/p/edge/spread) — ดูได้ในโหมด full</p></div>
+<div class="card"><h3>ขนาดไม้ &amp; ความเสี่ยง</h3><ul class="clean"><li>ไม้ละ <strong>1.00%</strong> ของพอร์ต (ช่วงทดลองใช้ 0.25–0.5%)</li><li>สูงสุด 6 ไม้/วัน · 5% ของพอร์ต/วัน</li><li>หยุดเมื่อ drawdown 15%</li><li>ทางออก: hold_to_resolution · stop เสริม -25%</li></ul></div>
+<div class="card"><h3>ต้นทุน &amp; เผื่อไว้</h3><ul class="clean"><li>tick ขั้นต่ำ 0.01 · ค่าธรรมเนียมสมมติ 0.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.00.0%</li><li>ไม้ที่ราคา &lt; 0.02 ห้ามซื้อ (ทดสอบแล้วชนะแค่ 6.0%)</li><li>เทียบ ask จริงทุกครั้งก่อนกดซื้อ</li></ul></div>
+</div>
+<div class="note" style="margin-top:14px"><strong>ระบบ ML (ทดสอบแล้ว):</strong> ML top-1 46.6% vs ours 44.5% (+2.1pts, Brier .672 vs .715) — ใช้เป็นตัวช่วยยืนยันได้<br>ML แพ้: 16:00 max 85.8% vs 86.2% · เงิน 16:00 80.0% vs 85.5% (ROI +517% vs +561%) · 14:00 67.7% vs 84.6%<br>ไม่แทนสูตรเราในเส้นเงิน · ใช้ ML ช่วยเฉพาะ &#x27;เลือก bin&#x27; ตอน day-ahead</div>
+<details><summary>ทดสอบแล้ว “ไม่ใช้” (กันหลงทางซ้ำ)</summary><ul class="clean">
+<li><strong>laddering</strong> — no effect: legs/basket 1.00, worst -34.6%</li>
+<li><strong>regional_models</strong> — no gain: EU -0.7..-5.3 pts, Asia -4.3..0.0</li>
+<li><strong>ensemble_member_counting</strong> — worse: 71.4% vs 86.9% intraday</li>
+<li><strong>price_below_002</strong> — trap: 6.0% win</li>
+</ul></details>
+</section>
+<section id="pipeline" aria-labelledby="plH"><h2 id="plH">รอบงานอัตโนมัติ</h2><div class="tblwrap"><table><caption>ตารางที่ตั้งไว้บน GitHub Actions (UTC) — ทุกอย่าง commit กลับเข้า repo เอง</caption><thead><tr><th scope="col">เวลา</th><th scope="col">ทำอะไร</th><th scope="col">ได้อะไร</th></tr></thead><tbody><tr><td>ทุก 30 นาที (:00, :30 UTC)</td><td>เช็คว่ามีเมืองถึงเวลาตัดสินใจไหม → สแกนเฉพาะเมืองนั้น</td><td>bid/ask + depth + obs + σ + snapshot</td></tr><tr><td>ทุกวัน 03:20 UTC</td><td>อัปเดตจักรวาล · วัดช่องว่าง bid/ask · เติมเฉลย</td><td>hit rate/EV/Brier จริง + รายงาน</td></tr><tr><td>ทุกครั้งที่ push</td><td>รันชุดทดสอบ 20 ข้อ</td><td>กันโค้ดพังเงียบ ๆ</td></tr></tbody></table></div>
+<p class="sub">นาที CI ที่ใช้ ~1,400–1,700/เดือน — อยู่ในโควตาฟรีของ repo ส่วนตัว (2,000 นาที)</p>
+</section>
+</main><footer><p>หน้านี้สร้างอัตโนมัติจาก <code>build_monitor.py</code> · โหมด safe · สร้างเมื่อ <time datetime="2026-09-25T13:03:17Z">2026-09-25T13:03:17Z</time></p><p>ตัวเลขทั้งหมดคำนวณสดจาก data/ ในขณะสร้าง (ไม่ใส่ค่าคงที่) · backtest ใช้ราคาซื้อขายล่าสุดจากประวัติตลาด · ผลจริงจะมาจาก forward-test เท่านั้น</p><p>ไม่ใช่คำแนะนำการลงทุน · ตลาดพยากรณ์อากาศมีความเสี่ยงสภาพคล่อง/การตัดสิน · ตรวจ ToS และภูมิภาคก่อนใช้เงินจริง</p></footer></div>
+<script>
+(function(){
+  var fmt = new Intl.DateTimeFormat('th-TH',{dateStyle:'medium',timeStyle:'short',timeZone:'Asia/Bangkok'});
+  var fmtD = new Intl.DateTimeFormat('th-TH',{dateStyle:'medium',timeZone:'Asia/Bangkok'});
+  document.querySelectorAll('time[datetime]').forEach(function(el){
+    var d = new Date(el.getAttribute('datetime'));
+    if(isNaN(d)) return;
+    try{ el.textContent = el.dataset.dateonly==='1' ? fmtD.format(d) : fmt.format(d); }catch(e){}
+  });
+
+  /* รอบถัดไปของ cron: ทุก 30 นาที (นาทีที่ 0/30 UTC) + งานรายวัน 03:20 UTC */
+  var nextEl = document.getElementById('nextRun');
+  function nextRun(){
+    var now = new Date();
+    var t = new Date(Date.UTC(now.getUTCFullYear(),now.getUTCMonth(),now.getUTCDate(),now.getUTCHours(),now.getUTCMinutes(),0));
+    t.setUTCMinutes(now.getUTCMinutes()<30?30:60,0,0);
+    return t;
+  }
+  function tick(){
+    if(!nextEl) return;
+    var t = nextRun();
+    var mins = Math.max(1, Math.round((t-new Date())/60000));
+    nextEl.textContent = fmt.format(t) + ' (อีก ~' + mins + ' นาที)';
+  }
+  tick(); setInterval(tick, 30000);
+
+  /* auto-refresh 15 นาที — ปิดได้ (จำค่าไว้ใน localStorage) */
+  var btn = document.getElementById('autoBtn');
+  var key = 'wx-mon-autorefresh';
+  var on = localStorage.getItem(key) !== '0';
+  var timer = null;
+  function apply(){
+    if(btn){ btn.setAttribute('aria-pressed', on?'true':'false'); btn.textContent = on? 'อัปเดตอัตโนมัติ: เปิด' : 'อัปเดตอัตโนมัติ: ปิด'; }
+    if(timer){ clearTimeout(timer); timer=null; }
+    if(on){ timer = setTimeout(function(){ location.reload(); }, 15*60*1000); }
+  }
+  if(btn){
+    btn.addEventListener('click', function(){ on = !on; localStorage.setItem(key, on?'1':'0'); apply(); });
+  }
+  apply();
+
+  var rf = document.getElementById('refreshBtn');
+  if(rf){ rf.addEventListener('click', function(){
+    var st = document.getElementById('live');
+    if(st) st.textContent = 'กำลังโหลดใหม่…';
+    location.reload();
+  }); }
+})();
+</script>
+</body></html>

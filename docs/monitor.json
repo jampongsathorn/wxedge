@@ -1,0 +1,59 @@
+{
+ "built_at": "2026-09-25T13:03:17Z",
+ "mode": "safe",
+ "backtest": {
+  "n": 379,
+  "wins": 356,
+  "hit": 93.93139841688654,
+  "pnl": 201883.65869999988,
+  "roi": 532.67456121372,
+  "dd": 200.0
+ },
+ "forward": {
+  "n": 0,
+  "resolved": 0,
+  "hit": null,
+  "snap_city_days": 5
+ },
+ "spread": {
+  "n": 140,
+  "bins": 140,
+  "measured_at": "2026-09-25T01:47:19.498363Z",
+  "ask_last": 0.006,
+  "last_bid": 0.0050000000000000044,
+  "spread": 0.01,
+  "settled": 14
+ },
+ "gates": [
+  {
+   "n": 1,
+   "title": "หลักฐาน backtest",
+   "status": "done",
+   "value": "379 ไม้ · 93.9% ชนะ · $201,884"
+  },
+  {
+   "n": 2,
+   "title": "หลักฐาน bid/ask จริง",
+   "status": "progress",
+   "value": "วัดได้ 140 bins (ask−last median 0.0060)"
+  },
+  {
+   "n": 3,
+   "title": "forward-test จริง ≥ 50 ไม้ · ชนะ ≥ 85%",
+   "status": "progress",
+   "value": "0/50 ไม้ settled"
+  },
+  {
+   "n": 4,
+   "title": "เงินทุน ≥ min-cap + 20%",
+   "status": "manual",
+   "value": "ต้องยืนยันเอง (min-cap ≈ $959 จากไม้ที่แพงสุด → เป้า ~$1,200)"
+  },
+  {
+   "n": 5,
+   "title": "บัญชีเทรดพร้อม",
+   "status": "manual",
+   "value": "ต้องยืนยันเอง (Polymarket + USDC บน Polygon + ภูมิภาคที่ใช้ได้)"
+  }
+ ]
+}

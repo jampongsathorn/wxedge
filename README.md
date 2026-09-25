@@ -685,6 +685,29 @@ stdlib ล้วน ไม่มี dependency · หน้าเว็บ inlin
 
 **ยังต้องปิด 3 ช่องด้วย log จริง:** ① ask ณ 16:00 local ของเมืองนั้น (การวัดนี้ทำคนละชั่วโมงกับตอนเข้าไม้) ② YES bestBid จริงตอนเข้า (สำหรับฝั่ง NO — log เก็บไว้แล้ว) ③ depth/ขนาดไม้ที่ fill ได้
 
+## 23. หน้า monitor บน GitHub Pages (ติดตามกลยุทธ์จากมือถือ)
+
+`build_monitor.py` สร้างหน้าเว็บ static ไฟล์เดียว (ไม่มี dependency ภายนอก/ไม่มี tracking) จากข้อมูลจริงใน `data/`
+ใช้มาตรฐาน Vercel Web Interface Guidelines (a11y · focus-visible · tabular-nums · Intl · prefers-reduced-motion · empty states)
+
+**มีอะไรในหน้า:** เป้าหมายก่อนใช้เงินจริง 5 ข้อ + progress · KPI (ไม้จริง/hit rate/PnL/Brier/ask−last) ·
+ไม้ที่รอเฉลย · ผลตามฝั่ง/เมือง · equity curve 379 ไม้ (SVG) · stress หลังหัก ask · โมเดล+จักรวาล (chips agreement) ·
+กติกาที่ล็อก · สิ่งที่ทดสอบแล้วไม่ใช้ · รอบงานอัตโนมัติ · ปุ่มโหลดใหม่ + ปิด/เปิดอัปเดตอัตโนมัติ 15 นาที
+
+```bash
+python3 build_monitor.py                     # → docs/index.html (โหมด safe: ซ่อน bin/ราคาของไม้ที่ยังไม่ settle)
+python3 build_monitor.py --mode full         # โหมดเต็ม (ใช้ในเครื่อง/ส่วนตัว)
+bash deploy/publish_monitor.sh --dry-run     # สร้าง + พรีวิวเป็น zip (ไม่ push)
+MONITOR_PAT=<token> bash deploy/publish_monitor.sh   # สร้าง + push ขึ้น repo ปลายทาง + GitHub Pages
+```
+
+**ทำไมต้อง repo แยก:** GitHub Pages บน repo ส่วนตัวต้องมีแผน Pro — แผนฟรีใช้ได้เฉพาะ repo สาธารณะ
+จึงแยกเป็น repo สาธารณะ `wxedge-monitor` ที่เก็บ *เฉพาะหน้าเว็บสำเร็จรูป* (ไม่มีซอร์สโค้ด/กติกา/ข้อมูลดิบ)
+และโหมด `safe` จะซ่อน bin/ราคาของไม้ที่ยังไม่ settled ด้วย
+
+**อัตโนมัติ:** workflow `forward-test.yml` จะ publish หลังมีข้อมูลใหม่/รอบรายวัน **ถ้ามี secret `MONITOR_PAT`**
+(token ที่เขียน repo monitor ได้ · contents: write) — ถ้าไม่มี secret จะสร้างหน้าไว้ที่ `docs/index.html` เฉย ๆ
+
 ---
 
 ## 22. รัน forward-test 24/7 ฟรี (life hack ฝั่ง dev)
