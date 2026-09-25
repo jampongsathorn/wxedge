@@ -12,7 +12,7 @@
 
 | บริการ | ฟรีจริงไหม | รัน Python ได้ | cron/ตั้งเวลา | เก็บข้อมูลถาวร | ต้องมีบัตร | เหมาะกับ |
 |---|---|---|---|---|---|---|
-| **GitHub Actions** ⭐ แนะนำ | ✅ public ไม่จำกัดนาที · private 2,000 นาที/เดือน (งานนี้ ~720 นาที/เดือน) | ✅ | ✅ cron ทุก 5 นาทีขึ้นไป (UTC) | commit กลับเข้า repo | ❌ ไม่ต้อง | ทุกคนที่มี GitHub — ไฟล์พร้อมใช้ใน `deploy/github-actions/` |
+| **GitHub Actions** ⭐ แนะนำ | ✅ public ไม่จำกัดนาที · private 2,000 นาที/เดือน (งานนี้ ~1,400–1,700) | ✅ | ✅ cron ทุก 5 นาทีขึ้นไป (UTC) | commit กลับเข้า repo | ❌ ไม่ต้อง | ทุกคนที่มี GitHub — ไฟล์พร้อมใช้ใน `deploy/github-actions/` |
 | **เครื่องตัวเอง / Raspberry Pi** ⭐ ง่ายสุด | ✅ ฟรี 100% | ✅ | ✅ crontab | ดิสก์ตัวเอง | ❌ | เปิดคอมทิ้งไว้ หรือ Pi กินไฟ ~3W |
 | **Oracle Cloud Always Free** | ✅ ARM 4 core/24GB "always free" | ✅ | ✅ crontab | ดิสก์ถาวร | ⚠️ ต้องบัตร (ยืนยันตัวตน ไม่ตัดเงิน) | อยากได้ VPS จริงถาวร |
 | **Google Apps Script** | ✅ 20,000 ครั้ง/วัน | ❌ (JS แต่เรียก API ได้) | ✅ time-driven trigger ทุก 1 ชม. | Google Sheet | ❌ ไม่ต้อง | ไม่มี GitHub/ไม่อยากแตะ terminal — ใช้ `deploy/appsscript.gs` |
@@ -66,9 +66,21 @@ git add .github/workflows/forward-test.yml && git commit -m "ci: forward-test" &
 ```
 
 จากนั้นที่หน้า repo → **Actions → wxedge-forward-test → Run workflow** เพื่อทดสอบทันที
-- ตั้งเวลา: ทุกชั่วโมง นาทีที่ 5 (UTC) — พอสำหรับทุก timezone ของ 33 เมือง
-- กันซ้ำในตัว: 1 เมือง/วัน/ชั่วโมง/ฝั่ง/bin เก็บแค่ครั้งแรก (ราคาที่ใกล้เวลาตัดสินใจที่สุด)
-- ข้อมูลจะถูก commit กลับเป็น `data/cheap_live_log.csv` — เปิดดูได้จากมือถือเลย
+
+**รอบการทำงาน (v2):**
+- ทุก 30 นาที → `deploy/gate.py` เช็คก่อนว่ามีเมืองถึงเวลาไหม (ช่วง 15:00–17:00 local) · ถ้าไม่มี **จบทันที ~10 วิ** ไม่เผานาที CI
+- รอบที่มีเมืองจริง → สแกนเฉพาะเมืองนั้น (~1–1.5 นาที) → ได้ราคาทุกครึ่งชั่วโมงช่วงตัดสินใจ
+- รายวัน 03:20 UTC → จักรวาล + bid/ask 90 bins + `forward_resolve.py` เติมเฉลย + รายงาน hit rate จริง
+- นาที CI รวม ~1,400–1,700/เดือน (โควตา private 2,000) · ถ้าอยากได้ทุก 15 นาทีต้องใช้ public
+- กันซ้ำในตัว: 1 เมือง/วัน/ชั่วโมง/ฝั่ง/bin เก็บแค่ครั้งแรกของชั่วโมงนั้น
+- ข้อมูล commit กลับเป็น `data/cheap_live_log.csv` + `data/snapshots/*.jsonl` — เปิดดูจากมือถือได้
+
+**log v3 เก็บ datapoint อะไรบ้าง (36 คอลัมน์):** timestamp · เมือง/วัน/ชั่วโมง local · ฝั่ง YES/NO · ชั้นไม้ · bin · หน่วย
+· `yes_bid`/`yes_ask`/`yes_last` · spread · `no_ask_implied` + `no_bid_implied` (สองฝั่งของสมุด)
+· **depth จริง** (`ask_depth_usd`, `bid_depth_usd`, `book_best_ask/bid` จาก CLOB order book)
+· `model_p`/`edge` · **`model_mu_c` + `model_sigma_c`** · **`obs_so_far_c` + `n_hist` + `n_bins`**
+· `vol`/`liquidity`/`min_size` · **`token_id` + `slug`** (เอาไปเทรด/ตรวจสอบได้ตรง ๆ) · `stop_price`
+· `won`/`resolved_bin`/`resolved_max_c`/`resolved_at` (เติมทีหลังด้วย `forward_resolve.py`)
 
 **ข้อควรรู้:** GitHub อาจเลื่อน cron ได้ ±5–15 นาทีตอนคนใช้เยอะ · ถ้า repo ไม่มี commit 60 วัน schedule จะถูกปิด (แก้: กด Enable ใหม่ หรือให้บอท commit ทุกวัน ซึ่งงานนี้ commit เองอยู่แล้ว)
 
@@ -83,9 +95,12 @@ bash deploy/run_forward_test.sh
 
 # ตั้ง cron
 crontab -e
-5 * * * *  cd /path/to/wxedge && bash deploy/run_forward_test.sh >> /tmp/wxedge.log 2>&1
-0 3 * * *  cd /path/to/wxedge && DAILY=1 bash deploy/run_forward_test.sh >> /tmp/wxedge.log 2>&1
+*/30 * * * *  cd /path/to/wxedge && bash deploy/run_forward_test.sh >> /tmp/wxedge.log 2>&1
+20 3 * * *    cd /path/to/wxedge && DAILY=1 bash deploy/run_forward_test.sh >> /tmp/wxedge.log 2>&1
 ```
+
+ตัวรันจะเช็คช่วงเวลาเองผ่าน `deploy/gate.py` — รอบที่ไม่มีเมืองถึงเวลาใช้เวลาไม่ถึงวินาที
+ปรับช่วงเวลาได้ด้วย `HOUR_WINDOW=14-18` และปิดการ push ด้วย `PUSH=0`
 
 ## วิธี 3: Google Apps Script (ไม่มี GitHub / ไม่อยากใช้ terminal)
 
@@ -98,7 +113,7 @@ crontab -e
 ## เช็คว่าเก็บครบหรือยัง (หลังรัน 1–2 สัปดาห์)
 
 ```bash
-python3 forward_report.py        # (ถ้ามี) สรุป hit rate จริง + เทียบราคาที่จ่ายจริง vs last-trade
+python3 forward_resolve.py       # เติมเฉลย + hit rate/EV/Brier จาก log จริง → reports/forward_report.md
 python3 bidask_check.py          # วัดช่องว่าง ask−last ใหม่จากข้อมูลปัจจุบัน
 ```
 

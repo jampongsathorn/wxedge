@@ -14,10 +14,11 @@ cheap_live.py v2 — ใช้จริงตาม "กลยุทธ์ฉบ
   python3 cheap_live.py                      # สแกนเมืองที่ local time อยู่ในช่วง 14-19 (ในจักรวาล)
   python3 cheap_live.py --cities denver,seattle --json
   python3 cheap_live.py --hour 15 --cities paris   # ทดสอบ as-of
-  python3 cheap_live.py --log                # บันทึกคำแนะนำลง data/cheap_live_log.csv (v2: มีฝั่ง NO + bid/ask จริง)
+  python3 cheap_live.py --log                # บันทึกคำแนะนำ + snapshot ลง data/ (v3: bid/ask จริง · depth · สถานะ obs · token id · เฉลย)
+  python3 cheap_live.py --log --hour-window 15-17   # โหมด cron: สแกนเฉพาะเมืองที่ใกล้เวลาเข้าไม้
   python3 cheap_live.py --no-universe-filter # ปิดตัวกรองเมือง (ไม่แนะนำ)
 """
-import argparse, collections, csv, json, math, os, re, sys
+import argparse, collections, csv, json, math, os, re, statistics as _st, sys
 from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 
@@ -27,10 +28,50 @@ import cheap_bets as CB
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 LOG = os.path.join(HERE, "data", "cheap_live_log.csv")
-LOG_COLS = ["logged_at", "city", "target", "hour", "side", "tier", "bin", "yes_bid", "yes_ask",
-            "no_ask_implied", "spread", "model_p", "edge", "vol", "min_size", "stop_price", "won"]
+# v3 (2026-09-25): ครบทุก datapoint ที่บอทต้องใช้ — สถานะ obs ตอนเข้าไม้ · depth จริง · token id · สองฝั่งของสมุด · เฉลย
+LOG_COLS = ["logged_at", "city", "target", "local_time", "hour", "side", "tier", "bin", "unit",
+            "yes_bid", "yes_ask", "yes_last", "spread", "no_ask_implied", "no_bid_implied",
+            "ask_depth_usd", "bid_depth_usd", "book_best_ask", "book_best_bid",
+            "model_p", "edge", "model_mu_c", "model_sigma_c", "obs_so_far_c", "n_hist", "n_bins",
+            "vol", "liquidity", "min_size", "token_id", "slug", "stop_price",
+            "won", "resolved_bin", "resolved_max_c", "resolved_at"]
+SNAP_DIR = os.path.join(HERE, "data", "snapshots")
 UNIVERSE_JSON = os.path.join(HERE, "data", "universe.json")
 AGREE_THR = 0.90
+
+
+def book_snap(token_id):
+    """(best_ask, ask_depth_usd, best_bid, bid_depth_usd) จาก CLOB order book ของ token นั้น
+    depth = มูลค่า ณ ราคานั้น (price × size) → ใช้ตอบคำถาม 'ไม้ที่แนะนำ fill ได้จริงไหม' """
+    if not token_id:
+        return None
+    try:
+        j = W.get_json("https://clob.polymarket.com/book?token_id=%s" % token_id, ttl=0, no_cache=True)
+    except Exception:
+        return None
+    if not isinstance(j, dict):
+        return None
+    asks = [(float(a["price"]), float(a["size"])) for a in (j.get("asks") or [])]
+    bids = [(float(b["price"]), float(b["size"])) for b in (j.get("bids") or [])]
+    if not asks and not bids:
+        return None
+    ba = min(asks) if asks else (None, None)
+    bb = max(bids) if bids else (None, None)
+    return dict(best_ask=ba[0], ask_depth_usd=round(ba[0] * ba[1], 1) if ba[0] is not None else None,
+                best_bid=bb[0], bid_depth_usd=round(bb[0] * bb[1], 1) if bb[0] is not None else None)
+
+
+def last_trade(token_id):
+    """ราคาซื้อขายล่าสุด (ใช้เทียบว่า bid/ask เบี้ยวจากราคาซื้อขายจริงแค่ไหน)"""
+    if not token_id:
+        return None
+    try:
+        j = W.get_json("https://clob.polymarket.com/prices-history?market=%s&interval=1d&fidelity=60" % token_id,
+                       ttl=0, no_cache=True)
+    except Exception:
+        return None
+    h = (j or {}).get("history") or []
+    return round(float(h[-1]["p"]), 3) if h else None
 
 
 def build_universe(thr=AGREE_THR, min_n=10, verbose=False):
@@ -114,7 +155,8 @@ def model_dist(cfg, city, day, hour, lookback=30):
     return mx, incs
 
 
-def scan_city(city, cfg, hour, pmax, min_edge, pmin, target=None, max_spread=0.04, min_size=0.0):
+def scan_city(city, cfg, hour, pmax, min_edge, pmin, target=None, max_spread=0.04, min_size=0.0,
+              want_depth=False):
     tz = ZoneInfo(cfg["tz"])
     now = datetime.now(tz)
     day = datetime.strptime(target, "%Y-%m-%d").date() if target else now.date()
@@ -153,12 +195,17 @@ def scan_city(city, cfg, hour, pmax, min_edge, pmin, target=None, max_spread=0.0
         oms = float(m.get("orderMinSize") or 0)
         p_mod = mp.get(lab, 0.0)
         edge = p_mod - ask
+        try:
+            _toks = json.loads(m.get("clobTokenIds") or "[]")
+        except Exception:
+            _toks = []
         out.append(dict(bin=lab, ask=round(ask, 3), bid=round(bid, 3) if bid is not None else None,
                         spread=round(spread, 4) if spread is not None else None,
                         model_p=round(p_mod, 3), edge=round(edge, 3),
                         vol=round(float(m.get("volumeNum") or m.get("volume") or 0), 0),
                         liquidity=round(float(m.get("liquidityNum") or 0), 0),
-                        min_size=oms))
+                        min_size=oms, token_id=(_toks[0] if _toks else None),
+                        slug=m.get("slug"), condition_id=m.get("conditionId")))
     picks = [o for o in out if 0.02 <= o["ask"] < pmax and o["model_p"] >= pmin and o["edge"] >= min_edge]
     picks = [o for o in picks if (o["spread"] is None or o["spread"] <= max_spread)
              and (min_size <= 0 or o["min_size"] <= min_size)]
@@ -189,13 +236,23 @@ def scan_city(city, cfg, hour, pmax, min_edge, pmin, target=None, max_spread=0.0
                              entry_cost=no_cost, no_ask_implied=no_cost, bid=bid, spread=o.get("spread"),
                              model_p=o["model_p"], edge=round(bid - o["model_p"], 3),
                              vol=o["vol"], liquidity=o.get("liquidity"), min_size=o.get("min_size"),
-                             max_so_far=round(mx_u, 2)))
+                             max_so_far=round(mx_u, 2), token_id=o.get("token_id"), slug=o.get("slug")))
+    if want_depth:
+        for p in list(picks) + list(no_picks):
+            snap = book_snap(p.get("token_id"))
+            if snap:
+                p["book_best_ask"] = snap["best_ask"]
+                p["book_best_bid"] = snap["best_bid"]
+                p["ask_depth_usd"] = snap["ask_depth_usd"]
+                p["bid_depth_usd"] = snap["bid_depth_usd"]
+            p["yes_last"] = last_trade(p.get("token_id"))
     screened = sorted(out, key=lambda o: (-o["model_p"], o["ask"]))[:3]
     return dict(city=city, station=cfg["icao"], unit=cfg["unit"], target=day.isoformat(),
                 screened=[dict(bin=o["bin"], ask=o["ask"], bid=o.get("bid"), p=o["model_p"]) for o in screened],
                 local_time=now.strftime("%Y-%m-%d %H:%M"), hour=hour,
                 obs_so_far_c=round(mx_c, 2), n_hist=len(incs),
-                picks=picks, no_picks=no_picks,
+                picks=picks, no_picks=no_picks, bins=out, mu_c=round(mx_c, 3),
+                sigma_c=(round(_st.stdev(incs), 3) if len(incs) > 1 else None),
                 best_ask=min((o["ask"] for o in picks), default=None),
                 note="YES: ราคา 0.02–%.2f · p ≥ %.2f · edge ≥ %.2f · spread ≤ %.3f | NO: bin ที่ต่ำกว่า max-so-far >0.5° (ถือถึงเฉลย)"
                      % (pmax, pmin, min_edge, max_spread))
@@ -203,7 +260,9 @@ def scan_city(city, cfg, hour, pmax, min_edge, pmin, target=None, max_spread=0.0
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--cities", default="auto", help="auto = เมืองที่ local time อยู่ในช่วง 14-19 (ในจักรวาล)")
+    ap.add_argument("--cities", default="auto", help="auto = เมืองที่ local time อยู่ในช่วง --hour-window (ในจักรวาล)")
+    ap.add_argument("--hour-window", default="14-19",
+                    help="ช่วง local hour สำหรับ --cities auto (ค่าเริ่มต้น 14-19 · โหมด cron ใช้ 15-17 เพื่อประหยัดนาที CI)")
     ap.add_argument("--hour", type=int, default=0, help="ใช้ชั่วโมงนี้แทนชั่วโมงปัจจุบัน (สำหรับทดสอบ)")
     ap.add_argument("--day", default="", help="วันเป้าหมาย YYYY-MM-DD (ค่าเริ่มต้น=วันนี้)")
     ap.add_argument("--pmax", type=float, default=0.25)
@@ -229,13 +288,15 @@ def main():
         if UNIV is None:
             print("⚠ ยังไม่มี data/dataset_full.csv หรือ market_labels.csv — ข้ามตัวกรองจักรวาล")
 
+    hw_lo, hw_hi = [int(x) for x in a.hour_window.split("-")]
+
     if a.cities == "auto":
         cities = []
         for c, v in cfgs.items():
             if not v.get("icao"):
                 continue
             t = datetime.now(ZoneInfo(v["tz"]))
-            if 14 <= t.hour <= 19 and (UNIV is None or c in UNIV):
+            if hw_lo <= t.hour <= hw_hi and (UNIV is None or c in UNIV):
                 cities.append(c)
     else:
         cities = a.cities.split(",")
@@ -249,7 +310,7 @@ def main():
     for c in cities:
         r = scan_city(c, cfgs[c], a.hour or datetime.now(ZoneInfo(cfgs[c]["tz"])).hour,
                       a.pmax, a.min_edge, a.pmin, a.day or None,
-                      max_spread=a.max_spread, min_size=a.min_size)
+                      max_spread=a.max_spread, min_size=a.min_size, want_depth=a.log)
         res.append(r)
 
     if a.json:
@@ -274,25 +335,48 @@ def main():
 
     if a.log and res:
         os.makedirs(os.path.dirname(LOG), exist_ok=True)
-        # อัปเกรด log v1 → v2 (เพิ่มฝั่ง NO + bid/ask) โดยไม่ทำข้อมูลเดิมหาย
+        # อัปเกรดฟอร์แมต log (v1/v2 → v3) โดยไม่ทำข้อมูลเดิมหาย
         if os.path.exists(LOG):
             with open(LOG, newline="", encoding="utf-8") as f:
                 head = next(csv.reader(f), [])
             if [h.strip() for h in head] != LOG_COLS:
-                arc = LOG.replace(".csv", "_v1.csv")
+                arc = LOG.replace(".csv", "_prev.csv")
+                n = 2
+                while os.path.exists(arc):
+                    arc = LOG.replace(".csv", "_prev%d.csv" % n)
+                    n += 1
                 os.replace(LOG, arc)
-                print("เก็บ log แบบเก่าไว้ที่ %s แล้วเริ่มไฟล์ v2 ใหม่" % arc)
+                print("เก็บ log ฟอร์แมตเก่าไว้ที่ %s แล้วเริ่มไฟล์ v3 ใหม่" % arc)
         new = not os.path.exists(LOG)
         seen = set()
         if not (a.force_log or new):
             for r0 in csv.DictReader(open(LOG, encoding="utf-8")):
                 seen.add((r0.get("city"), r0.get("target"), str(r0.get("hour")), r0.get("side"), r0.get("bin")))
         added = skipped = 0
+        ts = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+        def _log_row(r, p, side):
+            """แถวเดียวต่อ (เมือง, วัน, ชั่วโมง, ฝั่ง, bin) — เก็บทุก datapoint ที่บอทต้องใช้ตัดสินใจ"""
+            yb = p.get("bid")
+            ya = p.get("ask") if side == "YES" else p.get("book_best_ask")
+            if side == "YES":
+                no_ask, no_bid = (round(1 - yb, 3) if yb is not None else None), (round(1 - ya, 3) if ya is not None else None)
+            else:
+                no_ask = p.get("no_ask_implied")
+                no_bid = round(1 - ya, 3) if ya is not None else None
+            return [ts, r["city"], r["target"], r.get("local_time"), r["hour"], side, p["tier"], p["bin"], r.get("unit"),
+                    yb, ya, p.get("yes_last"), p.get("spread"), no_ask, no_bid,
+                    p.get("ask_depth_usd"), p.get("bid_depth_usd"), p.get("book_best_ask"), p.get("book_best_bid"),
+                    p["model_p"], p["edge"], r.get("mu_c"), r.get("sigma_c"), r.get("obs_so_far_c"),
+                    r.get("n_hist"), len(r.get("bins") or []),
+                    p.get("vol"), p.get("liquidity"), p.get("min_size"), p.get("token_id"), p.get("slug"),
+                    (round(p["ask"] * 0.75, 4) if side == "YES" else None),
+                    "", "", "", ""]                       # won, resolved_bin, resolved_max_c, resolved_at → forward_resolve.py เติมทีหลัง
+
         with open(LOG, "a", newline="", encoding="utf-8") as f:
             w = csv.writer(f)
             if new:
                 w.writerow(LOG_COLS)
-            ts = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
             for r in res:
                 if r.get("error"):
                     continue
@@ -302,9 +386,7 @@ def main():
                         skipped += 1
                         continue
                     seen.add(key)
-                    w.writerow([ts, r["city"], r["target"], r["hour"], "YES", p["tier"], p["bin"],
-                                p.get("bid"), p["ask"], None, p.get("spread"), p["model_p"], p["edge"],
-                                p["vol"], p.get("min_size"), round(p["ask"] * 0.75, 4), ""])
+                    w.writerow(_log_row(r, p, "YES"))
                     added += 1
                 for p in r.get("no_picks", []):
                     key = (r["city"], r["target"], str(r["hour"]), "NO", p["bin"])
@@ -312,11 +394,38 @@ def main():
                         skipped += 1
                         continue
                     seen.add(key)
-                    w.writerow([ts, r["city"], r["target"], r["hour"], "NO", p["tier"], p["bin"],
-                                p["bid"], None, p["no_ask_implied"], p.get("spread"), p["model_p"],
-                                p["edge"], p["vol"], p.get("min_size"), None, ""])
+                    w.writerow(_log_row(r, p, "NO"))
                     added += 1
         print("บันทึก %s: เพิ่ม %d แถว · ข้ามซ้ำ %d แถว (กันซ้ำตาม city+วัน+ชั่วโมง+ฝั่ง+bin)" % (LOG, added, skipped))
+
+        # ── snapshot: การแจกแจงเต็ม + ราคาทุก bin (ไม่ dedupe — ต้องได้ time series ของราคาช่วงเข้าไม้) ──
+        os.makedirs(SNAP_DIR, exist_ok=True)
+        snap_path = os.path.join(SNAP_DIR, datetime.now(timezone.utc).strftime("%Y-%m-%d") + ".jsonl")
+        done = set()
+        if os.path.exists(snap_path):
+            for ln in open(snap_path, encoding="utf-8"):
+                try:
+                    d0 = json.loads(ln)
+                    done.add((d0["city"], d0["target"], d0["local_time"]))
+                except Exception:
+                    continue
+        n_snap = 0
+        with open(snap_path, "a", encoding="utf-8") as f:
+            for r in res:
+                if r.get("error") or not r.get("bins"):
+                    continue
+                k = (r["city"], r["target"], r.get("local_time"))
+                if k in done:
+                    continue
+                done.add(k)
+                rec = dict(ts=ts, city=r["city"], target=r["target"], local_time=r.get("local_time"), hour=r.get("hour"),
+                           obs_so_far_c=r.get("obs_so_far_c"), mu_c=r.get("mu_c"), sigma_c=r.get("sigma_c"),
+                           n_hist=r.get("n_hist"), max_so_far_c=r.get("obs_so_far_c"),
+                           bins=[[b["bin"], b["model_p"], b["ask"], b["bid"], int(b["vol"] or 0)] for b in r["bins"]])
+                f.write(json.dumps(rec, ensure_ascii=False) + "\n")
+                n_snap += 1
+        if n_snap:
+            print("snapshot: +%d เมือง → %s" % (n_snap, snap_path))
 
 
 if __name__ == "__main__":

@@ -1,1 +1,1 @@
-logged_at,city,target,hour,side,tier,bin,yes_bid,yes_ask,no_ask_implied,spread,model_p,edge,vol,min_size,stop_price,won
+logged_at,city,target,local_time,hour,side,tier,bin,unit,yes_bid,yes_ask,yes_last,spread,no_ask_implied,no_bid_implied,ask_depth_usd,bid_depth_usd,book_best_ask,book_best_bid,model_p,edge,model_mu_c,model_sigma_c,obs_so_far_c,n_hist,n_bins,vol,liquidity,min_size,token_id,slug,stop_price,won,resolved_bin,resolved_max_c,resolved_at

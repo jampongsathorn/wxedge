@@ -1,18 +1,22 @@
-# ชุดรัน forward-test ฟรีบน GitHub Actions
+# ชุดรัน forward-test ฟรีบน GitHub Actions (v2 — ทุก 30 นาที)
 # วางไฟล์นี้ที่  <repo>/.github/workflows/forward-test.yml
-# ทำงาน: ทุกชั่วโมง → สแกนเมืองที่ local time อยู่ในช่วง 14:00–19:00 → บันทึก bid/ask จริงลง log
-#        ทุกวัน 03:00 UTC → อัปเดต universe + ทดสอบช่องว่าง last-trade ↔ bid/ask
-# ฟรี: repo public ไม่จำกัดนาที · repo private 2,000 นาที/เดือน (งานนี้ใช้ ~1 นาที/รอบ → ~720 นาที/เดือน)
+#
+# ทำงาน:
+#   ทุก 30 นาที → gate เช็คว่ามีเมืองถึงเวลาเข้าไม้ไหม (ถ้าไม่มี = จบทันที ไม่เผานาที CI)
+#                ถ้ามี → สแกนเฉพาะเมืองนั้น → บันทึก bid/ask จริง + depth + snapshot การแจกแจง (log v3)
+#   ทุกวัน 03:20 UTC → อัปเดตจักรวาลเมือง + วัดช่องว่าง bid/ask + เติม "เฉลย" ลง log + รายงาน forward
+#
+# นาที CI: รอบที่มีเมืองจริง ~1-1.5 นาที · รอบเปล่า ~10 วิ → ประมาณ 1,400-1,700 นาที/เดือน (โควตา private = 2,000)
 name: wxedge-forward-test
 
 on:
   schedule:
-    - cron: "5 * * * *"        # ทุกชั่วโมง นาทีที่ 5 (UTC) — ครอบทุก timezone ของ 33 เมือง
-    - cron: "0 3 * * *"        # รายวัน: universe + bid/ask probe
-  workflow_dispatch:           # กดรันเองได้จากหน้า Actions
+    - cron: "*/30 * * * *"      # ทุก 30 นาที (UTC) — เก็บราคาช่วง 15:00-17:00 local ของแต่ละเมือง
+    - cron: "20 3 * * *"        # รายวัน 03:20 UTC — universe + bid/ask + เฉลย + รายงาน
+  workflow_dispatch:            # กดรันเองได้จากหน้า Actions (รันทันทีไม่สนช่วงเวลา)
 
 permissions:
-  contents: write              # ต้องมี เพื่อ commit log กลับเข้า repo
+  contents: write               # ต้องมี เพื่อ commit log กลับเข้า repo
 
 concurrency:
   group: wxedge-log
@@ -21,40 +25,56 @@ concurrency:
 jobs:
   log:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 8
     steps:
       - uses: actions/checkout@v4
 
+      - name: เช็คช่วงเวลา (ข้ามรอบเปล่า — ประหยัดนาที CI)
+        id: gate
+        run: python3 deploy/gate.py --hour-window 15-17 >> "$GITHUB_OUTPUT"
+
       - uses: actions/setup-python@v5
+        if: steps.gate.outputs.run == 'true' || github.event.schedule == '20 3 * * *' || github.event_name == 'workflow_dispatch'
         with:
           python-version: "3.11"
           cache: pip
 
       - name: ติดตั้ง dependency (numpy ตัวเดียว)
+        if: steps.gate.outputs.run == 'true' || github.event.schedule == '20 3 * * *' || github.event_name == 'workflow_dispatch'
         run: |
           python -m pip install --quiet --upgrade pip
           pip install --quiet -r deploy/requirements.txt
 
-      - name: บันทึกไม้ + ราคาจริง (เฉพาะเมืองที่ถึงเวลาเทรด)
+      - name: บันทึกไม้ + ราคาจริง (log v3: bid/ask · depth · สถานะ obs · snapshot)
+        if: steps.gate.outputs.run == 'true' || github.event_name == 'workflow_dispatch'
         run: |
-          python cheap_live.py --log
-          # บันทึกจำนวนแถวไว้ดูใน log ของ Actions
-          wc -l data/cheap_live_log.csv || true
+          python cheap_live.py --log --hour-window 15-17 --cities "${{ steps.gate.outputs.cities }}"
+          wc -l data/cheap_live_log.csv
 
-      - name: รายวัน — อัปเดตจักรวาลเมือง + วัดช่องว่าง bid/ask
-        if: github.event.schedule == '0 3 * * *'
+      - name: รายวัน — จักรวาล + bid/ask + เติมเฉลย + รายงาน forward
+        if: github.event.schedule == '20 3 * * *'
         run: |
           python -c "import cheap_live as C; C.build_universe(verbose=True)"
           python bidask_check.py --max-bins 90 || true
+          python forward_resolve.py || true
+          tail -20 reports/forward_report.md || true
 
       - name: commit ข้อมูลกลับเข้า repo (ถ้ามีการเปลี่ยน)
+        if: always() && steps.gate.conclusion == 'success'
         run: |
           git config user.name  "wxedge-bot"
           git config user.email "wxedge-bot@users.noreply.github.com"
-          git add -f data/cheap_live_log.csv data/universe.json data/bidask_probe.json reports/bidask_check.md || true
+          git add -f data/cheap_live_log.csv data/universe.json data/bidask_probe.json data/forward_stats.json \
+                     data/snapshots reports/bidask_check.md reports/forward_report.md || true
           if git diff --cached --quiet; then
             echo "ไม่มีข้อมูลใหม่"
           else
             git commit -m "forward-test log $(date -u +'%Y-%m-%dT%H:%MZ') [skip ci]"
             git push
           fi
+
+      - name: สรุปในหน้า Actions
+        if: always()
+        run: |
+          echo "แถวใน log: $(wc -l < data/cheap_live_log.csv 2>/dev/null || echo 0) · เมืองรอบนี้: ${{ steps.gate.outputs.cities }}"
+          tail -3 data/cheap_live_log.csv 2>/dev/null || true

@@ -708,10 +708,21 @@ repo พร้อม push แล้ว: `.gitignore` + commit แรก + `.gith
 
 ไฟล์พร้อมใช้ในโปรเจกต์:
 - `deploy/github-actions/forward-test.yml` — workflow (รายชั่วโมง `5 * * * *` สแกน+log · รายวัน `0 3 * * *` อัปเดต universe + `bidask_check --max-bins 90` · commit กลับเป็น wxedge-bot ข้าม CI)
-- `deploy/requirements.txt` — numpy ตัวเดียว
+- `deploy/requirements.txt` — numpy ตัวเดียว · `deploy/gate.py` — เช็คช่วงเวลาก่อนสแกน (ข้ามรอบเปล่า) · `forward_resolve.py` — เติมเฉลย + รายงานผลจริง
 - `deploy/run_forward_test.sh` — ตัวรันสำหรับ cron/VPS/Pi (มี PUSH=0 ปิดการ commit, DAILY=1 โหมดรายวัน)
 - `deploy/appsscript.gs` — ทางเลือก Google Apps Script เขียนลง Sheet (เก็บ bid/ask/last/volume/spread)
 - `deploy/README.md` — ขั้นตอนติดตั้งแบบละเอียด · `deploy/setup_github.sh` — ตั้งค่า repo+workflow+push ในคำสั่งเดียว · `deploy/wxedge-repo-bundle.tar.gz` — บันเดิลส่งขึ้นเครื่อง
+
+**รอบการทำงาน (v2 · ทุก 30 นาที):** `deploy/gate.py` เช็คก่อนว่ามีเมืองอยู่ในช่วง 15:00–17:00 local ไหม — ถ้าไม่มีจบทันที (~10 วิ ไม่เผานาที CI)
+· รอบที่มีเมืองสแกนเฉพาะเมืองนั้น → ได้ราคาทุกครึ่งชั่วโมงช่วงตัดสินใจ · รายวัน 03:20 UTC ทำจักรวาล + bid/ask + `forward_resolve.py`
+เติมเฉลยและสรุป hit rate จริง · นาที CI ~1,400–1,700/เดือน (โควตา private 2,000)
+
+**log v3 (36 คอลัมน์) เก็บทุก datapoint ที่บอทต้องใช้:** สถานะ obs ตอนเข้าไม้ (`obs_so_far_c`, `n_hist`, `n_bins`)
+· พารามิเตอร์การแจกแจง (`model_mu_c`, `model_sigma_c`) · สองฝั่งสมุด (`yes_bid`/`yes_ask`/`yes_last`, `no_ask_implied`, `no_bid_implied`)
+· **depth จริง** (`ask_depth_usd`, `bid_depth_usd`, `book_best_ask/bid` จาก CLOB) · `token_id`/`slug` เอาไปเทรดได้ตรง ๆ
+· `won`/`resolved_bin`/`resolved_max_c` (เติมโดย `forward_resolve.py`) · snapshot `data/snapshots/<วัน>.jsonl` = การแจกแจงเต็ม + ราคาทุก bin
+
+**เครื่องมือปิดวง:** `forward_resolve.py` — เติมเฉลยลง log แล้ววัด hit rate/EV/Brier/calibration จริง → `reports/forward_report.md`
 
 **กันข้อมูลซ้ำ:** `cheap_live.py --log` มี dedupe key `(city, target, hour, side, bin)` — cron ยิงทุกชั่วโมงจึงเก็บเพียง "ราคาแรกที่เห็น" ในชั่วโมงนั้น (ใกล้เวลาตัดสินใจที่สุด) ถ้าอยากบันทึกทับโดยเจตนาใช้ `--force-log`
 
