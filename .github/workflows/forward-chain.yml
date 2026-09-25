@@ -1,0 +1,52 @@
+# wxedge-forward-chain — เก็บข้อมูลจริงต่อเนื่อง โดยไม่ต้องพึ่งความแม่นของ cron
+#
+# แนวคิด: 1 job วนเก็บทุก 10 นาที นาน ~5.5 ชม. (ใกล้เพดาน 6 ชม. ของ GitHub) แล้ว "สั่งรันตัวเองใหม่"
+#         ถ้า dispatch ไม่ผ่าน/โซ่ขาด → cron สำรอง */30 จะเริ่มโซ่ใหม่ให้เอง
+#         รอบที่ไม่มีเมืองถึงเวลา = วนเร็ว (แค่ gate) · กันโซ่ซ้อนด้วย heartbeat ใน data/chain_state.json
+#
+# ต้องมี: secret CHAIN_PAT (fine-grained token · Actions: write ในrepo นี้) สำหรับ "ต่อโซ่"
+#         ถ้าไม่มี secret → ยังทำงานได้ แต่ต่อโซ่ได้เฉพาะตอน cron สำรองยิง
+name: wxedge-forward-chain
+
+on:
+  schedule:
+    - cron: "*/30 * * * *"      # สำรอง: เริ่มโซ่ใหม่ถ้าอันเก่าตาย (และกันโซ่ซ้อนด้วย heartbeat)
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: wxedge-chain
+  cancel-in-progress: false
+
+jobs:
+  chain:
+    runs-on: ubuntu-latest
+    timeout-minutes: 350          # 5 ชม. 50 นาที (เพดาน GitHub = 6 ชม.)
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: ติดตั้ง dependency (numpy ตัวเดียว)
+        run: |
+          python -m pip install --quiet --upgrade pip
+          pip install --quiet -r deploy/requirements.txt
+
+      - name: ตั้งค่า git สำหรับ commit อัตโนมัติ
+        run: |
+          git config user.name  "wxedge-bot"
+          git config user.email "wxedge-bot@users.noreply.github.com"
+
+      - name: วนเก็บข้อมูล (ทุก 10 นาที จนครบ ~5.5 ชม.) แล้วต่อโซ่ถัดไป
+        env:
+          CHAIN_PAT: ${{ secrets.CHAIN_PAT }}
+          CHAIN_HOURS: "5.5"
+          INTERVAL_MIN: "10"
+          WORKERS: "4"
+          MODE_MONITOR: full
+        run: bash deploy/chain_loop.sh
