@@ -690,9 +690,10 @@ stdlib ล้วน ไม่มี dependency · หน้าเว็บ inlin
 `build_monitor.py` สร้างหน้าเว็บ static ไฟล์เดียว (ไม่มี dependency ภายนอก/ไม่มี tracking) จากข้อมูลจริงใน `data/`
 ใช้มาตรฐาน Vercel Web Interface Guidelines (a11y · focus-visible · tabular-nums · Intl · prefers-reduced-motion · empty states)
 
-**หน้าเว็บจริง:** https://jampongsathorn.github.io/wxedge-monitor/ (repo: `jampongsathorn/wxedge-monitor` — สาธารณะ เก็บแค่ HTML/JSON ที่สร้างเสร็จ)
-· ค่าเริ่มต้นตอนนี้เป็น `MODE=full` (โชว์ bin/ราคา/กติกาเต็ม + ป้ายเตือนบนหน้า) · เปลี่ยนเป็น `safe` ได้ที่ env ใน workflow
-· secret `MONITOR_PAT` ตั้งไว้แล้ว → CI publish เองทุกครั้งที่ข้อมูลเปลี่ยน (ทดสอบแล้ว: run 36139275010 push สำเร็จ)
+**หน้าเว็บจริง:** https://jampongsathorn.github.io/wxedge/ — GitHub Pages ของ repo นี้เอง (source = `main` โฟลเดอร์ `/docs`)
+· ไม่ต้องใช้ token/secret ใด ๆ แล้ว (เดิมใช้ repo แยก `wxedge-monitor` + secret `MONITOR_PAT` — ตอนนี้ repo นั้นเหลือแค่หน้า redirect)
+· workflow จะรัน `build_monitor.py --skip-if-same` แล้ว commit `docs/` **เมื่อตัวเลข KPI เปลี่ยน** → Pages build เองอัตโนมัติ
+· โหมดปัจจุบัน `MODE=full` (โชว์ bin/ราคา/กติกาเต็ม) · ตั้ง env `MODE: safe` ใน workflow เพื่อซ่อนไม้ที่ยังไม่ settle
 
 **มีอะไรในหน้า:** เป้าหมายก่อนใช้เงินจริง 5 ข้อ + progress · KPI (ไม้จริง/hit rate/PnL/Brier/ask−last) ·
 ไม้ที่รอเฉลย · ผลตามฝั่ง/เมือง · equity curve 379 ไม้ (SVG) · stress หลังหัก ask · โมเดล+จักรวาล (chips agreement) ·
@@ -739,10 +740,17 @@ repo พร้อม push แล้ว: `.gitignore` + commit แรก + `.gith
 - `deploy/run_forward_test.sh` — ตัวรันสำหรับ cron/VPS/Pi (มี PUSH=0 ปิดการ commit, DAILY=1 โหมดรายวัน)
 - `deploy/appsscript.gs` — ทางเลือก Google Apps Script เขียนลง Sheet (เก็บ bid/ask/last/volume/spread)
 - `deploy/README.md` — ขั้นตอนติดตั้งแบบละเอียด · `deploy/setup_github.sh` — ตั้งค่า repo+workflow+push ในคำสั่งเดียว · `deploy/wxedge-repo-bundle.tar.gz` — บันเดิลส่งขึ้นเครื่อง
+- ไม่ต้องมี secret ใด ๆ: บอท commit ด้วย `GITHUB_TOKEN` ของ repo และ Pages เสิร์ฟจาก `docs/` ในตัว
 
-**รอบการทำงาน (v2 · ทุก 30 นาที):** `deploy/gate.py` เช็คก่อนว่ามีเมืองอยู่ในช่วง 15:00–17:00 local ไหม — ถ้าไม่มีจบทันที (~10 วิ ไม่เผานาที CI)
-· รอบที่มีเมืองสแกนเฉพาะเมืองนั้น → ได้ราคาทุกครึ่งชั่วโมงช่วงตัดสินใจ · รายวัน 03:20 UTC ทำจักรวาล + bid/ask + `forward_resolve.py`
-เติมเฉลยและสรุป hit rate จริง · นาที CI ~1,400–1,700/เดือน (โควตา private 2,000)
+**รอบการทำงาน (v4 · ทุก 10 นาที):** `deploy/gate.py` ตัดสิน "เมืองไหนควรสแกน" จาก 3 เงื่อนไข — (1) อยู่ในช่วงบริบท 14:00–18:00 local
+(2) ไม่ได้สแกนเมืองนี้ถี่เกิน gap ที่ตั้ง (entry 10 นาที · ctx 30 นาที) โดยอ่านสถานะ "สแกนล่าสุด" จาก `data/snapshots/<วัน>.jsonl`
+(3) เป็นเมืองในจักรวาล · ช่วง **entry 15:30–16:30 local = เก็บทุก 10 นาที (7 ตัวอย่าง/เมือง/วัน)** รอบจุดตัดสินใจ 16:00
+· รอบที่ไม่มีเมืองเข้าเงื่อนไขจบใน ~15 วิ · สแกนขนาน `--workers 4` (pacing ต่อ host เป็น thread-safe แล้ว — เคยโดน IEM 429)
+· รายวัน 03:20 UTC ทำจักรวาล + bid/ask + เติมเฉลย + รายงาน
+
+**ต้องเป็น repo สาธารณะ:** GitHub คิดนาที CI **ปัดขึ้นเป็นนาทีต่อรอบ** → ตัวคูณคือ "จำนวนรอบ" ไม่ใช่ปริมาณงาน
+cadence 10 นาที = 144 รอบ/วัน ≈ 4,400 นาที/เดือน ซึ่งเกินโควตาฟรี 2,000 ของ repo ส่วนตัว (เกินแล้วรันถูกบล็อก)
+repo สาธารณะ = ไม่คิดนาที → เก็บถี่ได้ไม่จำกัด · วัดจริง: รอบเปล่า ~39 วิ (1 นาที) · รอบมีงาน 60–90 วิ (2 นาที)
 
 **log v3 (36 คอลัมน์) เก็บทุก datapoint ที่บอทต้องใช้:** สถานะ obs ตอนเข้าไม้ (`obs_so_far_c`, `n_hist`, `n_bins`)
 · พารามิเตอร์การแจกแจง (`model_mu_c`, `model_sigma_c`) · สองฝั่งสมุด (`yes_bid`/`yes_ask`/`yes_last`, `no_ask_implied`, `no_bid_implied`)

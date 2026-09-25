@@ -1,8 +1,13 @@
 name: wxedge-tests
 
+# รันเฉพาะเมื่อ "โค้ด" เปลี่ยน — ข้อมูลที่บอท commit ทุก ~10 นาที ไม่ต้องรันเทสต์ซ้ำ
 on:
   push:
     branches: [main]
+    paths:
+      - "*.py"
+      - "deploy/**"
+      - ".github/workflows/tests.yml"
   workflow_dispatch:
 
 jobs:
