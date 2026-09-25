@@ -36,8 +36,8 @@ jobs:
         id: gate
         run: >-
           python3 deploy/gate.py
-          --entry 15:30-16:30 --entry-gap 10
-          --ctx 14:00-18:00 --ctx-gap 30
+          --entry 15:00-16:30 --entry-gap 4
+          --ctx 12:30-18:30 --ctx-gap 11
           >> "$GITHUB_OUTPUT"
 
       - uses: actions/setup-python@v5

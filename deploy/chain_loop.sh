@@ -7,6 +7,10 @@
 # ตัวแปร: CHAIN_HOURS (5.5) · INTERVAL_MIN (5) · ENTRY_WIN/GAP · CTX_WIN/GAP · STATE (data/chain_state.json)
 #         WORKERS (4) · ENTRY/CTX windows · DRY=1 = ไม่ push (ทดสอบ) · PUSH=0 = ไม่ push
 set -uo pipefail
+# ใช้ฟังก์ชันกลาง (root fix B1–B3: guard/state/push ต้องมีชุดเดียว ไม่คัดลอก)
+_LIB="$(cd "$(dirname "$0")" && pwd)/chain_lib.sh"
+[ -f "$_LIB" ] || { echo "ไม่พบ $_LIB"; exit 1; }
+. "$_LIB"
 cd "$(dirname "$0")/.."
 PY=${PY:-python3}
 INTERVAL_MIN=${INTERVAL_MIN:-5}
@@ -24,71 +28,24 @@ now_iso() { date -u +"%Y-%m-%dT%H:%M:%SZ"; }
 now_epoch() { date -u +%s; }
 log() { echo "[$(date -u +%H:%M:%S)] $*"; }
 
-# ── กันโซ่ซ้อน: ถ้ามีโซ่อื่นยังเต้นอยู่ (heartbeat สด) ให้ออกทันที ──
+# ── กันโซ่ซ้อน: ถ้ามีโซ่อื่นยังเต้นอยู่จริง (state สด) ให้ออกทันที ──
 END=$(( $(now_epoch) + $(python3 -c "print(int(float('$CHAIN_HOURS')*3600))") ))
 prev_end=0; prev_beat=0
 if [ -f "$STATE" ]; then
-  read -r prev_end prev_beat < <(python3 - "$STATE" <<'PY'
-import json, sys, datetime as dt
-try:
-    d = json.load(open(sys.argv[1], encoding="utf-8"))
-    end = int(dt.datetime.strptime(d["ends_at"], "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=dt.timezone.utc).timestamp())
-    beat = int(dt.datetime.strptime(d["beat_at"], "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=dt.timezone.utc).timestamp())
-except Exception:
-    end = beat = 0
-print(end, beat)
-PY
-)
-  if [ "$prev_end" -gt "$(now_epoch)" ] && [ $(( $(now_epoch) - prev_beat )) -lt $(( HEARTBEAT_STALE_MIN * 60 )) ]; then
+  read -r prev_end prev_beat < <(chain_state_fields "$STATE")
+  if chain_guard_should_exit "$prev_end" "$prev_beat" "$(now_epoch)" "$HEARTBEAT_STALE_MIN"; then
     log "มีโซ่อื่นทำงานอยู่ (heartbeat อีก $(( (prev_end - $(now_epoch)) / 60 )) นาที) — ออกเพื่อไม่ให้ซ้อน"
     exit 0
   fi
 fi
 
-write_state() {
-  python3 - "$STATE" "$END" "$(now_iso)" <<'PY'
-import json, sys, datetime as dt
-path, end, beat = sys.argv[1], int(sys.argv[2]), sys.argv[3]
-json.dump({"ends_at": dt.datetime.fromtimestamp(end, dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
-           "beat_at": beat}, open(path, "w", encoding="utf-8"), indent=1)
-PY
-}
+write_state() { chain_state_write "$STATE" "$END" "$(now_iso)"; }
 
-git_pull_push() {
-  [ "$PUSH" = "1" ] && [ -d .git ] || return 0
-  git add -f data reports docs 2>/dev/null || true
-  git diff --cached --quiet && { log "ไม่มีข้อมูลใหม่"; PUSH_FAIL=0; return 0; }
-  git -c user.name=wxedge-bot -c user.email=wxedge-bot@users.noreply.github.com \
-      commit -q -m "forward-test log $(now_iso) [skip ci]" || return 0
-  for i in 1 2 3; do
-    # เคลียร์สถานะ rebase/merge ที่อาจค้างจากรอบก่อน (สาเหตุ: มี commit ใหม่เข้ามาชนกัน)
-    git rebase --abort >/dev/null 2>&1 || true
-    git merge  --abort >/dev/null 2>&1 || true
-    git fetch -q origin main 2>/dev/null || { sleep 5; continue; }
-    # ชนกันเมื่อไรให้ยึดข้อมูลฝั่งเรา (ข้อมูลเราสดกว่าเสมอ: snapshot/รายงานที่เพิ่งสร้าง)
-    if ! git -c user.name=wxedge-bot -c user.email=wxedge-bot@users.noreply.github.com \
-         merge -q --no-edit -X ours origin/main >/dev/null 2>&1; then
-      git rebase --abort >/dev/null 2>&1 || true
-      git merge  --abort >/dev/null 2>&1 || true
-      git checkout --ours -q -- data docs reports 2>/dev/null || true
-      git add -A 2>/dev/null || true
-      git -c user.name=wxedge-bot -c user.email=wxedge-bot@users.noreply.github.com \
-          commit -q -m "chain: merge (ours) $(now_iso) [skip ci]" >/dev/null 2>&1 || true
-    fi
-    git push -q origin main 2>/dev/null && { log "push แล้ว (ครั้งที่ $i)"; PUSH_FAIL=0; return 0; }
-    sleep 5
-  done
-  PUSH_FAIL=$(( PUSH_FAIL + 1 ))
-  log "⚠ push ไม่สำเร็จ (ต่อเนื่อง $PUSH_FAIL รอบ) — ข้อมูลยังอยู่ในเครื่อง runner"
-}
+git_pull_push() { chain_git_push_round "forward-test log" || true; PUSH_FAIL=${CHAIN_PUSH_FAIL:-0}; }
 
 write_state
-if [ "$PUSH" = "1" ] && [ -d .git ]; then
-  git add -f "$STATE" 2>/dev/null || true
-  git -c user.name=wxedge-bot -c user.email=wxedge-bot@users.noreply.github.com \
-      commit -q -m "chain: เริ่มโซ่ถึง $(date -u -d "@$END" +%Y-%m-%dT%H:%MZ) [skip ci]" 2>/dev/null || true
-  git push -q origin main 2>/dev/null || true
-fi
+# push state เริ่มโซ่ผ่านตรรกะกลาง (fetch + merge -X ours + abort ที่ค้าง) — ห้ามใช้ git push ตรง ๆ
+chain_git_push_round "chain: เริ่มโซ่ถึง $(date -u -d "@$END" +%Y-%m-%dT%H:%MZ)" || true
 log "เริ่มโซ่ · จะวนถึง $(date -u -d "@$END" +%Y-%m-%dT%H:%MZ) · ทุก $INTERVAL_MIN นาที · workers $WORKERS"
 
 rounds=0; scans=0; empty=0; PUSH_FAIL=0
@@ -106,7 +63,9 @@ while [ "$(now_epoch)" -lt "$END" ]; do
   fi
 
   # ── เลือกเมืองที่ควรสแกนรอบนี้ ──
-  GATE=$( $PY deploy/gate.py --entry "$ENTRY_WIN" --entry-gap "$ENTRY_GAP" --ctx "$CTX_WIN" --ctx-gap "$CTX_GAP" 2>/dev/null || true )
+  GATE=$( $PY deploy/gate.py --entry "$ENTRY_WIN" --entry-gap "$ENTRY_GAP" --ctx "$CTX_WIN" --ctx-gap "$CTX_GAP" 2>&1 ) || true
+  if [ -z "$GATE" ]; then GATE_ERR=$( $PY deploy/gate.py --entry "$ENTRY_WIN" --entry-gap "$ENTRY_GAP" --ctx "$CTX_WIN" --ctx-gap "$CTX_GAP" 2>&1 | tail -1 )
+    log "⚠ gate ไม่ตอบ — ข้ามรอบนี้ · สาเหตุ: $GATE_ERR"; fi
   RUN=$(echo "$GATE" | sed -n 's/^run=//p')
   CITIES=$(echo "$GATE" | sed -n 's/^cities=//p')
   MODE=$(echo "$GATE" | sed -n 's/^mode=//p')
@@ -115,7 +74,8 @@ while [ "$(now_epoch)" -lt "$END" ]; do
     log "รอบที่ $rounds · โหมด $MODE · $CITIES"
     timeout 900 $PY cheap_live.py --log --workers "$WORKERS" --cities "$CITIES" 2>&1 | tail -3
     # หน้า monitor อัปเดตเมื่อ KPI เปลี่ยน (log/จักรวาล/bid-ask/เฉลย/รายงาน) — snapshot เปล่า ๆ ไม่ต้อง rebuild Pages
-    git add -f data/cheap_live_log.csv data/universe.json data/bidask_probe.json data/forward_stats.json reports 2>/dev/null || true
+    chain_git_stage_paths data/cheap_live_log.csv data/universe.json data/bidask_probe.json \
+                         data/forward_stats.json reports
     if ! git diff --cached --quiet; then
       timeout 300 $PY build_monitor.py --quiet --mode "${MODE_MONITOR:-full}" --skip-if-same --out docs/index.html --json-out docs/monitor.json || true
     fi

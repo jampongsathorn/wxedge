@@ -791,8 +791,10 @@ repo พร้อม push แล้ว: `.gitignore` + commit แรก + `.gith
 
 | ช่วง (local ของเมือง) | ความถี่ | ได้อะไร |
 |---|---|---|
-| 15:35–16:25 (ช่วงตัดสินใจ) | ทุก 5 นาที | ราคา ask/bid ณ เวลาเข้าไม้จริง → ปิดช่อง ① ของหลักฐาน |
+| 15:00–16:30 (ช่วงตัดสินใจ) | ทุก 5 นาที | ราคา ask/bid ณ เวลาเข้าไม้จริง → ปิดช่อง ① ของหลักฐาน |
 | 12:30–18:30 (บริบท) | ทุก 15 นาที | เส้นทางราคาทั้งบ่าย → ตอบว่า “ต้องเข้าเร็ว/ช้ากว่า 16:00 ไหม” |
+
+> ⚠ เกณฑ์เว้นระยะต้อง **น้อยกว่า** รอบตื่น (รอบตื่นห่างจริง 4 น. 45 วิ → ใช้ `ENTRY_GAP=4`, `CTX_GAP=11`) ไม่งั้นรอบจะถูกข้ามเป็นรอบคู่
 | นอกช่วง | ข้าม | รอบเปล่าใช้เวลาไม่ถึงวินาที |
 
 ทุกครั้งที่สแกนจะเขียน `data/snapshots/<วัน>.jsonl` = การแจกแจงเต็ม + ask/bid ของ **ทุก bin** (ไม่ dedupe)
@@ -847,3 +849,20 @@ amsterdam 0.17 → 0.98 ใน ~2 ชม. · และ “หน้าต่า�
 
 **รอบ entry ของคืนนี้ (เวลาไทย):** 01:35 buenos-aires/sao-paulo · 02:35 nyc/miami/atlanta/toronto
 · 03:35 austin/chicago/dallas/houston/panama-city · 04:35 denver/mexico-city · 05:35 los-angeles
+
+### 24.2 แก้บั๊กแบบ systematic (25 ก.ย. 2026) — `reports/chain_bugfix.md`
+
+ใช้กระบวนการ Reproduce → Root cause → Dependency search → Fix root → Fix all → Validate → Regression guard
+แก้ **6 บั๊ก** (4 ที่รู้ + 2 ที่เจอระหว่างทำ) โดย root fix อยู่ที่ `deploy/chain_lib.sh` ที่เดียว:
+
+| # | อาการ | แก้ที่ |
+|---|---|---|
+| B1 | เก็บได้ทุก 10 นาทีแทน 5 (gap ≥ รอบตื่นจริง) | workflow + chain_loop defaults (`ENTRY_GAP=4`) |
+| B2 | โซ่หยุดเงียบ 25 นาที (state ค้าง + watchdog ดูแค่ heartbeat) | watchdog ตัดสินจาก beat + run active · ปลด state เอง |
+| B3 | push ชนกัน → rebase ค้าง → push ไม่ได้เลย | `chain_git_push_round` (abort + `merge -X ours`) |
+| B4 | `run_forward_test.sh` (cron VPS/Pi) ตายเงียบจาก flag v1 | เรียก gate v2 + ใช้ lib |
+| B5 | **ข้อมูลหายเงียบ**: `git add data reports docs` ล้มทั้งคำสั่งเมื่อโฟลเดอร์ใดหาย | `chain_git_stage_paths` (ทีละ path) |
+| B6 | gate error ถูกกลืน (`2>/dev/null \|\| true`) | log `⚠ gate ไม่ตอบ — สาเหตุ: ...` |
+
+**Regression guard:** `tests_chain.py` (T1–T7 · 24 การตรวจ · รันใน CI ทุก push คู่กับ `tests_live_v2.py`)
+**ตรวจสอบแล้ว:** ทั้ง 2 ชุดผ่าน · `bash -n` + `yaml.safe_load` ผ่าน · ทดสอบ E2E บน GitHub Actions ด้วย watchdog `stale_min=0`

@@ -8,6 +8,16 @@ on:
   schedule:
     - cron: "*/30 * * * *"
   workflow_dispatch:
+    inputs:
+      stale_min:            # ใช้ทดสอบ E2E: 0 = บังคับให้ถือว่า "ตาย" แล้วทดสอบ cancel+ปลด state+dispatch
+        description: "เกณฑ์ heartbeat ค้าง (นาที)"
+        required: false
+        default: "25"
+      dry:
+        description: "ทดลอง (ไม่ยิง API)"
+        type: boolean
+        required: false
+        default: false
 
 permissions:
   actions: write        # ยกเลิก run + dispatch
@@ -27,4 +37,6 @@ jobs:
       - name: ตรวจ heartbeat → รีสตาร์ตโซ่ที่ค้าง
         env:
           GH_TOKEN: ${{ github.token }}
+          STALE_MIN: ${{ inputs.stale_min || '25' }}
+          DRY: ${{ inputs.dry && '1' || '0' }}
         run: bash deploy/chain_watchdog.sh

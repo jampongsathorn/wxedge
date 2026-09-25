@@ -21,5 +21,8 @@ jobs:
           python-version: "3.11"
           cache: pip
       - run: pip install --quiet -r deploy/requirements.txt
-      - name: รันชุดทดสอบ (offline, ไม่ต่อเน็ต)
+      - name: รันชุดทดสอบ cheap_live (offline, ไม่ต่อเน็ต)
         run: python tests_live_v2.py
+
+      - name: รันชุดทดสอบระบบโซ่ (gate · guard · push ชนกัน · watchdog)
+        run: python tests_chain.py
