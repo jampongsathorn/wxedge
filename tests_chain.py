@@ -49,16 +49,21 @@ def write_state(path, end_delta_s, beat_delta_s):
 tmp = tempfile.mkdtemp(prefix="wxedge_tests_chain_")
 try:
     print("═══ T1: gate gap ต้องตรงรอบตื่น (B1) ═══")
+    # ใช้เวลาคงที่ (19:20 UTC = 15:20 EDT) ผ่าน --now → เทสต์ไม่ผูกกับเวลาที่รัน (กัน flaky)
+    FIXED_NOW = "2026-06-01T19:20:00Z"
+    fixed_dt = datetime(2026, 6, 1, 19, 20, 0, tzinfo=timezone.utc)
     state = os.path.join(tmp, "snap.jsonl")
     with open(state, "w", encoding="utf-8") as fh:
         for c in ("nyc", "buenos-aires"):
-            fh.write(json.dumps({"ts": iso(-285), "city": c, "target": "2026-09-25", "hour": 15, "unit": "F",
+            fh.write(json.dumps({"ts": (fixed_dt - timedelta(seconds=285)).strftime("%Y-%m-%dT%H:%M:%SZ"),
+                                 "city": c, "target": "2026-06-01", "hour": 15, "unit": "F",
                                  "obs_so_far_c": 20.0, "mu_c": 22.0, "sigma_c": 1.2, "n_hist": 10,
                                  "max_so_far_c": 20.0, "bins": []}) + "\n")
 
     def entry_cities(gap):
         out = run(["python3", "deploy/gate.py", "--entry", "15:00-16:30", "--entry-gap", str(gap),
-                   "--ctx", "12:30-18:30", "--ctx-gap", "11", "--state-file", state]).stdout
+                   "--ctx", "12:30-18:30", "--ctx-gap", "11", "--state-file", state,
+                   "--now", FIXED_NOW]).stdout
         for line in out.splitlines():
             if line.startswith("entry_cities="):
                 return set(x for x in line.split("=", 1)[1].split(",") if x)
@@ -206,6 +211,50 @@ try:
                        "CHAIN_PAT": ""}, timeout=180).stdout
         started = "เริ่มโซ่" in out
         check(name, started == expect_start, "out=%s" % out.strip().replace("\n", " | ")[:120])
+
+    print()
+    print("═══ T8: forward_resolve — สรุป/รายงานต้องไม่พังเมื่อมีไม้จริง (4 บั๊ก 26 ก.ย. 2026) ═══")
+    sys.path.insert(0, ROOT)
+    import forward_resolve as FR
+    rows = [
+        {"won": "1", "side": "YES", "yes_ask": "0.04", "no_ask_implied": "0.96", "model_p": "0.96",
+         "tier": "หลัก (ask ≤0.10)", "city": "dallas"},
+        {"won": "0", "side": "YES", "yes_ask": "0.05", "no_ask_implied": "0.95", "model_p": "0.91",
+         "tier": "หลัก (ask ≤0.10)", "city": "panama-city"},
+        {"won": "1", "side": "NO", "yes_ask": "0.9", "no_ask_implied": "0.12", "model_p": "0.03",
+         "tier": "ขาย (พิสูจน์ได้)", "city": "nyc"},
+    ]
+    try:
+        o = FR.summarize(rows, 100.0)
+        check("T8a summarize() รองรับไม้ YES (บั๊กเดิม: KeyError 'YES')",
+              o["yes"]["n"] == 2 and o["yes"]["w"] == 1 and o["no"]["n"] == 1, str(o["yes"]))
+    except Exception as e:
+        o = None
+        check("T8a summarize() รองรับไม้ YES", False, "%s: %s" % (type(e).__name__, e))
+    try:
+        md = FR.render_report(o, 100.0, "x")
+        check("T8b render_report() คืนลิสต์ (บั๊กเดิม: ลืม return → join พัง)", isinstance(md, list))
+        check("T8c ทุกบรรทัดเป็น str (บั๊กเดิม: ใส่ float ของ brier ตรง ๆ)",
+              all(isinstance(x, str) for x in md), str([type(x).__name__ for x in md if not isinstance(x, str)]))
+        joined = "\n".join(md)
+        check("T8d join ได้จริง และมีตัวเลขเงินแบบ comma", "dallas" in joined and "$" in joined)
+        check("T8e Brier ถูกจัดรูปแบบเป็นตัวเลข", any("Brier" in l and "%" not in l[:60] for l in md))
+    except Exception as e:
+        check("T8b/c/d render_report", False, "%s: %s" % (type(e).__name__, e))
+    check("T8f money() ใส่ comma และเครื่องหมาย", FR.money(1234567.8) == "+1,234,568" and FR.money(-500) == "-500",
+          FR.money(1234567.8))
+    check("T8g ไม่เหลือ %-format ที่ใช้ comma (%-format ไม่รองรับ)",
+          "%+," not in open(os.path.join(ROOT, "forward_resolve.py"), encoding="utf-8").read())
+    try:
+        import io
+        import contextlib
+        with contextlib.redirect_stdout(io.StringIO()):
+            rc = subprocess.run([sys.executable, "forward_resolve.py", "--report-only"],
+                                capture_output=True, text=True, cwd=ROOT)
+        check("T8h รัน forward_resolve.py --report-only สำเร็จ (ไม่ crash)",
+              rc.returncode == 0, (rc.stderr or "").strip().splitlines()[-1] if rc.stderr else "")
+    except Exception as e:
+        check("T8h รัน forward_resolve.py --report-only", False, str(e))
 
     print()
     print("═══ T7: ไฟล์ที่ต้องมี + อ้างอิงถูกต้อง ═══")
