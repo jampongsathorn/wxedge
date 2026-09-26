@@ -154,3 +154,23 @@ dallas ไปจบที่ 92-93°F (เราเดิมพัน 88-89°F) 
 
 เพิ่ม `p_exceed` เป็นคอลัมน์สุดท้าย · header ของ `data/cheap_live_log.csv` ถูก migrate แล้ว
 (`forward_resolve.py` อ่าน fieldnames จาก header เดิม จึงไม่พัง) — T9j บังคับให้ header ตรงกับ LOG_COLS เสมอ
+
+---
+
+# B13 — ตัวแยกป้าย bin อ่าน "or higher" ผิด (bin เปิดปลายถูกมองเป็น bin ปิด)
+
+เจอตอนทำ `resolved_max_c` ของไม้แรกที่เฉลย (panama 30°C) — เป็นบั๊กที่ **กระทบเงินจริงถ้าไม่แก้**
+
+- **อาการ**: `parse_bin_num("33°C or higher")` คืน `(33.0, 33.0)` = bin ปิด แทนที่จะเป็น `(33.0, +inf)`
+- **หลักฐานจากข้อมูลจริง**: ป้ายใน `cheap_bets.csv` + `market_labels.csv` ใช้ **"or higher" 20,133 ครั้ง
+  และ "or below" 20,062 ครั้ง — "or above" ไม่มีเลย** แต่โค้ดเช็ค `"or above"` เท่านั้น
+- **ผลกระทบ**: เกตฝั่ง NO ใน `scan_city` ใช้เงื่อนไข `hi_b != inf and hi_b < max_so_far − 0.5`
+  เพื่อ "ข้าม bin เปิดปลาย" — แต่พอ hi กลายเป็น 33 (finite) เงื่อนไขผ่าน → bin บนสุดที่ยังไม่ตัดสิน
+  ถูกมองเป็น bin ที่ตัดสินแล้ว = เสี่ยงขาย NO ทับ bin ที่ยังชนะได้
+  (ในทางปฏิบัติมีด่าน `no_cost ∈ [0.03, 0.50]` กันไว้ เพราะ NO ของ bin ที่ชนะแล้วราคาเกือบ 0 → ยังไม่มีข้อเสียจริงเกิดขึ้น)
+- **แก้**: รองรับ `"or higher"` / `"or lower"` ครบ **6 ไฟล์** — `cheap_live` · `forward_resolve`
+  · `entry_bucket` · `pnl_proof` · `strategy_full` · `refine_competitor`
+  (`wxedge.py` + `cheap_analyze.py` รองรับอยู่แล้วเพราะใช้ regex ตรง ๆ)
+- **กันกลับ**: T9m (cheap_live) · T9n (parity กับ forward_resolve) · T9o (ทุกไฟล์ต้องมี "or higher")
+- **ของแถม**: `forward_resolve` เติม `resolved_max_c` ได้ในเส้นทาง gamma แล้ว (ค่ากลาง bin ผู้ชนะ)
+  → ไม้แรกที่เฉลย panama 30°C เติมย้อนหลังเป็น `30.0°C`
