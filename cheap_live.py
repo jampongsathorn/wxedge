@@ -37,7 +37,8 @@ LOG_COLS = ["logged_at", "city", "target", "local_time", "hour", "side", "tier",
             "ask_depth_usd", "bid_depth_usd", "book_best_ask", "book_best_bid",
             "model_p", "edge", "model_mu_c", "model_sigma_c", "obs_so_far_c", "n_hist", "n_bins",
             "vol", "liquidity", "min_size", "token_id", "slug", "stop_price",
-            "won", "resolved_bin", "resolved_max_c", "resolved_at"]
+            "won", "resolved_bin", "resolved_max_c", "resolved_at",
+            "p_exceed"]
 SNAP_DIR = os.path.join(HERE, "data", "snapshots")
 UNIVERSE_JSON = os.path.join(HERE, "data", "universe.json")
 AGREE_THR = 0.90
@@ -139,8 +140,12 @@ def parse_bin_num(label):
 
 
 def model_dist(cfg, city, day, hour, lookback=30):
-    """การแจกแจงความน่าจะเป็นของค่าสูงสุดสุดท้าย (หน่วย °C) ณ ชั่วโมง hour"""
-    ser = I.hourly_series(cfg, day - timedelta(days=lookback + 2), day)
+    """การแจกแจงความน่าจะเป็นของค่าสูงสุดสุดท้าย (หน่วย °C) ณ ชั่วโมง hour
+
+    ⚠ no_cache=True เสมอ: บทเรียน 26 ก.ย. 2026 — cache 1 ชม. ของ hourly_series ทำให้ max-so-far
+    เก่าได้ถึง 60 นาที (Dallas: จริง 92°F @15:53 แต่ระบบเห็น 89°F @16:00 → โมเดล p=0.97 ผิด bin)
+    """
+    ser = I.hourly_series(cfg, day - timedelta(days=lookback + 2), day, no_cache=True)
     key = day.isoformat()
     hist = sorted(d for d in ser if d < key)
     cur = {hh: v for hh, v in (ser.get(key) or {}).items() if hh <= hour}
@@ -158,8 +163,28 @@ def model_dist(cfg, city, day, hour, lookback=30):
     return mx, incs
 
 
+
+def compute_p_exceed(bins):
+    """P_exceed ของแต่ละ bin = ราคา (ask) รวมของทุก bin ที่ 'สูงกว่า' bin นั้น (มุมมองตลาด).
+
+    ใช้เป็นเกตกันไม้ obs ล้าช้า: ถ้าตลาดยังให้ราคา bin ที่สูงกว่ารวมกันมาก แปลว่า
+    อุณหภูมิจริงอาจขึ้นไปแล้วแต่ข้อมูลที่เรามีล่าช้า (Dallas 26 ก.ย. 2026: P_exceed=1.00)
+    """
+    def _lo(o):
+        try:
+            lo_b, _hi = parse_bin_num(o["bin"])
+        except Exception:
+            return None
+        return lo_b
+    for o in bins:
+        n = _lo(o)
+        o["p_exceed"] = (round(min(sum(x["ask"] for x in bins if _lo(x) > n), 1.0), 3)
+                         if n is not None else None)
+    return bins
+
+
 def scan_city(city, cfg, hour, pmax, min_edge, pmin, target=None, max_spread=0.04, min_size=0.0,
-              want_depth=False):
+              want_depth=False, max_exceed=0.10):
     tz = ZoneInfo(cfg["tz"])
     now = datetime.now(tz)
     day = datetime.strptime(target, "%Y-%m-%d").date() if target else now.date()
@@ -209,9 +234,16 @@ def scan_city(city, cfg, hour, pmax, min_edge, pmin, target=None, max_spread=0.0
                         liquidity=round(float(m.get("liquidityNum") or 0), 0),
                         min_size=oms, token_id=(_toks[0] if _toks else None),
                         slug=m.get("slug"), condition_id=m.get("conditionId")))
+    # ── P_exceed: ราคา (ask) รวมของ bin ที่ "สูงกว่าของเรา" = ตลาดให้โอกาสที่ร้อนต่ออีกเท่าไร ──
+    #    หลักฐาน 26 ก.ย. 2026 (backtest 165 ไม้ @16:00): P_exceed <0.10 → hit 96.1% · ≥0.60 → hit 71.2%
+    #    เคสจริงที่แพ้ทั้ง 2 ไม้: P_exceed = 1.00 (ตลาดรู้ว่าอุณหภูมิขึ้นไปแล้ว แต่ obs เราล่าช้า)
+    out = compute_p_exceed(out)
+
     picks = [o for o in out if 0.02 <= o["ask"] < pmax and o["model_p"] >= pmin and o["edge"] >= min_edge]
     picks = [o for o in picks if (o["spread"] is None or o["spread"] <= max_spread)
              and (min_size <= 0 or o["min_size"] <= min_size)]
+    # กติกากันไม้ "obs ล้าช้า": ถ้าตลาดยังให้ราคา bin ที่สูงกว่ารวมกัน ≥ max_exceed → ข้าม
+    picks = [o for o in picks if o["p_exceed"] is None or o["p_exceed"] < max_exceed]
     picks.sort(key=lambda o: (-o["model_p"], o["ask"]))
     picks = picks[:1]                                   # argmax bin เดียว (กฎที่ทดสอบแล้ว)
     for o in picks:
@@ -272,6 +304,8 @@ def main():
     ap.add_argument("--pmin", type=float, default=0.90,
                     help="ธรณี p ของโมเดล (ค่าเริ่มต้น 0.90 = กฎไม้หลัก; ใช้ 0.35 = กว้างกว่า ชนะน้อยกว่า)")
     ap.add_argument("--min-edge", type=float, default=0.15)
+    ap.add_argument("--max-exceed", type=float, default=0.10,
+                    help="เพดานราคารวมของ bin ที่สูงกว่าเรา (P_exceed) — กันไม้ obs ล้าช้า (หลักฐาน 26 ก.ย.)")
     ap.add_argument("--max-spread", type=float, default=0.04,
                     help="spread สูงสุดที่ยอมรับ (ask-bid) — บทเรียนจาก repo weatherbot (0.03)")
     ap.add_argument("--min-size", type=float, default=0, help="ขนาดไม้ขั้นต่ำของตลาด (orderMinSize) ที่ยอมรับ")
@@ -319,7 +353,8 @@ def main():
         try:
             return scan_city(c, cfgs[c], a.hour or datetime.now(ZoneInfo(cfgs[c]["tz"])).hour,
                              a.pmax, a.min_edge, a.pmin, a.day or None,
-                             max_spread=a.max_spread, min_size=a.min_size, want_depth=a.log)
+                             max_spread=a.max_spread, min_size=a.min_size, want_depth=a.log,
+                             max_exceed=a.max_exceed)
         except Exception as e:                       # เมืองเดียวล้ม ต้องไม่ล้มทั้งรอบ (เช่น IEM ตอบ 429)
             return {"city": c, "error": "สแกนไม่สำเร็จ: %s" % str(e)[:120]}
 
@@ -388,7 +423,8 @@ def main():
                     r.get("n_hist"), len(r.get("bins") or []),
                     p.get("vol"), p.get("liquidity"), p.get("min_size"), p.get("token_id"), p.get("slug"),
                     (round(p["ask"] * 0.75, 4) if side == "YES" else None),
-                    "", "", "", ""]                       # won, resolved_bin, resolved_max_c, resolved_at → forward_resolve.py เติมทีหลัง
+                    "", "", "", "",                        # won, resolved_bin, resolved_max_c, resolved_at → forward_resolve.py เติมทีหลัง
+                    p.get("p_exceed")]
 
         with open(LOG, "a", newline="", encoding="utf-8") as f:
             w = csv.writer(f)

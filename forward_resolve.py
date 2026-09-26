@@ -165,6 +165,16 @@ def rate(d):
     return (100.0 * d["w"] / d["n"]) if d["n"] else float("nan")
 
 
+def hit(d):
+    """hit rate เป็นข้อความ — ไม่มีไม้ = "—" (ไม่โชว์ nan)"""
+    return ("%.1f%%" % rate(d)) if d["n"] else "—"
+
+
+def cost_of(d):
+    """ต้นทุนเฉลี่ยต่อไม้ — n=0 แสดงเป็น 0 (ไม่ใช่ nan ที่อ่านไม่รู้เรื่อง)"""
+    return (d["cost"] / d["n"]) if d["n"] else 0.0
+
+
 def render_report(o, stake=100.0, day=""):
     """สร้างรายงาน markdown จาก o = summarize() — แยกออกมาเพื่อให้เทสต์ได้โดยไม่ต้องมีเน็ต
     (บั๊ก 26 ก.ย. 2026: โค้ดเดิมฝังใน main() → เทสต์ไม่ได้ → พังเงียบจนมีไม้จริงไม้แรก)"""
@@ -174,12 +184,10 @@ def render_report(o, stake=100.0, day=""):
         L += ["**ยังไม่มีข้อมูล** — log มีแค่หัวตาราง รอ cron เก็บไม้ (จะเริ่มมีเมื่อมีเมืองถึงเวลาเข้าไม้)", ""]
     else:
         L += ["| ฝั่ง | ไม้ | ชนะ | hit rate | ต้นทุนเฉลี่ย | PnL รวม |", "|---|---|---|---|---|---|",
-              "| YES | %d | %d | %.1f%% | %.3f | $%s |" % (o["yes"]["n"], o["yes"]["w"], rate(o["yes"]),
-                                                          (o["yes"]["cost"] / o["yes"]["n"]) if o["yes"]["n"] else float("nan"),
-                                                  money(o["yes"]["pnl"])),
-              "| NO | %d | %d | %.1f%% | %.3f | $%s |" % (o["no"]["n"], o["no"]["w"], rate(o["no"]),
-                                                           (o["no"]["cost"] / o["no"]["n"]) if o["no"]["n"] else float("nan"),
-                                                           money(o["no"]["pnl"])), ""]
+              "| YES | %d | %d | %s | %.3f | $%s |" % (o["yes"]["n"], o["yes"]["w"], hit(o["yes"]),
+                                                       cost_of(o["yes"]), money(o["yes"]["pnl"])),
+              "| NO | %d | %d | %s | %.3f | $%s |" % (o["no"]["n"], o["no"]["w"], hit(o["no"]),
+                                                      cost_of(o["no"]), money(o["no"]["pnl"])), ""]
         if o["brier"] is not None:
             L += ["**Brier score (YES, เทียบ p ของโมเดลกับผลจริง 0/1):** %.4f (ยิ่งต่ำยิ่งดี · 0.25 = เดาสุ่ม)" % o["brier"], ""]
         if o["calib"]:
@@ -187,14 +195,15 @@ def render_report(o, stake=100.0, day=""):
                   "| ช่วง p | ไม้ | ชนะ | จริง |", "|---|---|---|---|"]
             for k in sorted(o["calib"]):
                 b = o["calib"][k]
-                L += ["| %.1f–%.1f | %d | %d | %.0f%% |" % (k, k + 0.1, b["n"], b["w"], 100.0 * b["w"] / b["n"])]
+                L += ["| %.1f–%.1f | %d | %d | %.0f%% |" % (k, k + 0.1, b["n"], b["w"],
+                                                                      (100.0 * b["w"] / b["n"]) if b["n"] else 0.0)]
             L += [""]
         L += ["**แยกตามชั้นไม้**", "", "| ชั้น | ไม้ | ชนะ | hit rate | PnL |", "|---|---|---|---|---|"]
         for t, d in sorted(o["by_tier"].items(), key=lambda kv: -kv[1]["n"]):
-            L += ["| %s | %d | %d | %.1f%% | $%s |" % (t, d["n"], d["w"], rate(d), money(d["pnl"]))]
+            L += ["| %s | %d | %d | %s | $%s |" % (t, d["n"], d["w"], hit(d), money(d["pnl"]))]
         L += ["", "**แยกตามเมือง (เฉพาะที่มีไม้)**", "", "| เมือง | ไม้ | ชนะ | hit rate | PnL |", "|---|---|---|---|---|"]
         for c, d in sorted(o["by_city"].items(), key=lambda kv: -kv[1]["n"]):
-            L += ["| %s | %d | %d | %.1f%% | $%s |" % (c, d["n"], d["w"], rate(d), money(d["pnl"]))]
+            L += ["| %s | %d | %d | %s | $%s |" % (c, d["n"], d["w"], hit(d), money(d["pnl"]))]
         L += [""]
     L += ["---", "",
           "**เกณฑ์ผ่านก่อนใช้เงินจริง (จากรายงานกลยุทธ์)**",
