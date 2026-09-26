@@ -135,9 +135,9 @@ snaps = sorted(os.listdir(CL.SNAP_DIR)) if os.path.isdir(CL.SNAP_DIR) else []
 check("เขียน snapshot jsonl (แจกแจงเต็ม + ราคาทุก bin)", len(snaps) >= 1, str(snaps[:2]))
 if snaps:
     ln = json.loads(open(os.path.join(CL.SNAP_DIR, snaps[0]), encoding="utf-8").readline())
-    check("snapshot มี ts/city/target/obs/mu/sigma/bins[5 ค่า]",
+    check("snapshot มี ts/city/target/obs/mu/sigma/bins[5 ค่า + token_id]",
           all(k in ln for k in ("ts", "city", "target", "obs_so_far_c", "mu_c", "sigma_c", "bins"))
-          and len(ln["bins"][0]) == 5, str(list(ln.keys())))
+          and len(ln["bins"][0]) >= 5, str(list(ln.keys())))
 
 _orig_gj = CL.W.get_json
 CL.W.get_json = lambda *a, **k: None                      # จำลองเน็ตล่ม
