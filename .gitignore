@@ -7,3 +7,4 @@ venv/
 *.log
 deploy/*.tar.gz
 deploy/*.zip
+data/exec_cache/
