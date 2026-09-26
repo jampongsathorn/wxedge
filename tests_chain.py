@@ -358,6 +358,39 @@ _em = json.load(open(os.path.join(ROOT, "data", "edge_monitor.json"), encoding="
 check("T10e นับคู่ bin×เวลาได้จริง", _em["pairs"] > 0 and _em["positive"] <= _em["pairs"], str(_em.get("pairs")))
 check("T10f มีคอลัมน์ best/median delta", _em.get("best_delta") is not None and _em.get("median_delta") is not None)
 
+# ── T11/T12: บทเรียน 26 ก.ย. (ราคาที่ซื้อได้จริง + เก็บดีลจริง) ──
+print()
+print("T11 · executable price (ดีลจริง) — exec_backtest")
+import exec_backtest as EB11
+_t0 = 1_700_000_000
+_fills = [(_t0 - 60, "BUY", 0.05, 500),        # ก่อนเวลา → ต้องไม่นับ
+          (_t0 + 10, "SELL", 0.10, 100),       # SELL → ต้องไม่นับ
+          (_t0 + 20, "BUY", 0.10, 50),         # notional 5
+          (_t0 + 30, "BUY", 0.20, 40)]         # notional 8 → รวม 13 ≥ 12 → ราคา 0.20
+_r = EB11.exec_price(_fills, _t0, 20, 12.0)
+check("T11a notional สะสมครบ stake → ราคาดีลที่ครบ (0.20)", _r and _r["px"] == 0.20 and _r["n_buy"] == 2, str(_r))
+check("T11b ดีลก่อนเวลา/ฝั่ง SELL ถูกตัดออก", _r and _r["first_px"] == 0.10)
+check("T11c ไม่มีดีลพอ → None (no-fill)", EB11.exec_price(_fills, _t0, 20, 999.0) is None)
+check("T11d ดีลนอกหน้าต่างเวลาถูกตัด", EB11.exec_price([(_t0 + 25 * 60, "BUY", 0.5, 1000)], _t0, 20, 12.0) is None)
+check("T11e roi_of: ราคา 0.25 ชนะ → +300%", abs(EB11.roi_of(0.25) - 3.0) < 1e-9)
+check("T11f cohort เลือกไม้ถูกกติกา (h=16 · p≥0.90 · 0.02–0.25)",
+      all(int(x["hour"]) == 16 and float(x["model_p"]) >= 0.90 and 0.02 <= float(x["price"]) <= 0.25 for x in EB11.cohort()[:50])
+      and len(EB11.cohort()) > 100, "n=%d" % len(EB11.cohort()))
+
+print()
+print("T12 · trades_probe — เก็บดีลจริงเข้าโซ่")
+import trades_probe as TP12
+check("T12a in_window ครึ่งชั่วโมงทำงาน", TP12.in_window(15.5, "14:30-17:30") and not TP12.in_window(18.0, "14:30-17:30"))
+check("T12b dedupe_key ต่างกันเมื่อ size/price ต่าง",
+      TP12.dedupe_key({"transactionHash": "x", "asset": "a", "timestamp": 1, "size": 1, "price": 0.1})
+      != TP12.dedupe_key({"transactionHash": "x", "asset": "a", "timestamp": 1, "size": 2, "price": 0.1}))
+check("T12c recent กรองตามเวลาได้", len(TP12.recent([{"timestamp": 100}, {"timestamp": 50}], 80)) == 1)
+_loop = open(os.path.join(ROOT, "deploy", "chain_loop.sh"), encoding="utf-8").read()
+check("T12d โซ่เรียก trades_probe ทุกรอบเข้าไม้", "trades_probe.py" in _loop)
+check("T12e โซ่ stage data/trades_live.jsonl", "data/trades_live.jsonl" in _loop)
+_cl = open(os.path.join(ROOT, "cheap_live.py"), encoding="utf-8").read()
+check("T12f snapshot เก็บ token_id (ธาตุที่ 6)", 'b.get("token_id")' in _cl)
+
 print()
 print("ผลรวม: %s" % ("ผ่านทั้งหมด ✓" if not fails else "ไม่ผ่าน %d รายการ: %s" % (len(fails), fails)))
 sys.exit(1 if fails else 0)

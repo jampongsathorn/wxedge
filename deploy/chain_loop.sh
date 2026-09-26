@@ -73,9 +73,11 @@ while [ "$(now_epoch)" -lt "$END" ]; do
     rounds=$((rounds + 1)); scans=$((scans + $(echo "$CITIES" | tr ',' '\n' | grep -c .)))
     log "รอบที่ $rounds · โหมด $MODE · $CITIES"
     timeout 900 $PY cheap_live.py --log --workers "$WORKERS" --cities "$CITIES" 2>&1 | tail -3
+    # ดีลจริง (fills) ของ bin ที่สนใจ ในหน้าต่างเข้าไม้ — หลักฐานว่า "ซื้อได้จริง" (snapshot = quote อาจค้าง)
+    timeout 300 $PY trades_probe.py --log 2>&1 | tail -2 || true
     # หน้า monitor อัปเดตเมื่อ KPI เปลี่ยน (log/จักรวาล/bid-ask/เฉลย/รายงาน) — snapshot เปล่า ๆ ไม่ต้อง rebuild Pages
     chain_git_stage_paths data/cheap_live_log.csv data/universe.json data/bidask_probe.json \
-                         data/forward_stats.json reports
+                         data/forward_stats.json data/trades_live.jsonl reports
     if ! git diff --cached --quiet; then
       timeout 300 $PY build_monitor.py --quiet --mode "${MODE_MONITOR:-full}" --skip-if-same --out docs/index.html --json-out docs/monitor.json || true
     fi

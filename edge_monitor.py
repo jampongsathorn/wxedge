@@ -38,20 +38,25 @@ def load(days=14):
 
 
 def pairs(rows):
-    """[(p-ask, ask, p, meta)] เฉพาะคู่ที่ราคาสมเหตุสมผล"""
+    """[(p-ask, ask, p, meta)] เฉพาะคู่ที่ราคาสมเหตุสมผล
+
+    ⚠ โครง bins ใน snapshot = [label, model_p, ask, bid, vol] — ห้ามสลับ (เคยพลาด 26 ก.ย. 2026:
+      อ่าน b[3] เป็น p ทำให้ p−ask กลายเป็น bid−ask และสรุปผิดว่า "ไม่เคยมี edge")
+    """
     out = []
     for r in rows:
         for b in (r.get("bins") or []):
-            if len(b) < 4 or b[3] is None or b[2] is None:
+            if len(b) < 4 or b[1] is None or b[2] is None:
                 continue
             try:
-                p, ask = float(b[3]), float(b[2])
+                p, ask = float(b[1]), float(b[2])
             except (TypeError, ValueError):
                 continue
             if not (0 < ask < 1):
                 continue
-            out.append(dict(delta=round(p - ask, 4), ask=ask, p=p, city=r.get("city"),
-                            hour=r.get("hour"), bin=b[0], ts=r.get("ts")))
+            out.append(dict(delta=round(p - ask, 4), ask=ask, p=p,
+                            bid=(float(b[3]) if b[3] is not None else None),
+                            city=r.get("city"), hour=r.get("hour"), bin=b[0], ts=r.get("ts")))
     return out
 
 
@@ -76,6 +81,9 @@ def main():
         median_delta=round(st.median([x["delta"] for x in ps]), 4) if ps else None,
         thresholds={str(t): sum(1 for x in ps if x["delta"] >= t) for t in (0.05, 0.10, 0.15, 0.20, 0.30)},
         tradable=[x for x in ps if 0.02 <= x["ask"] <= 0.25 and x["p"] >= 0.60 and x["delta"] >= 0.15],
+        strong_bins=dict(n=sum(1 for x in ps if x["p"] >= 0.90),
+                         ask_min=min([x["ask"] for x in ps if x["p"] >= 0.90], default=None),
+                         ask_median=round(st.median([x["ask"] for x in ps if x["p"] >= 0.90]), 3) if any(x["p"] >= 0.90 for x in ps) else None),
         by_day={d: dict(n=len(v), pos=sum(1 for x in v if x["delta"] > 0),
                         best=max(x["delta"] for x in v)) for d, v in sorted(by_day.items())},
         top=sorted(ps, key=lambda x: -x["delta"])[:10],
@@ -92,14 +100,16 @@ def main():
               "| ส่วนต่าง p−ask ดีที่สุด | %+.4f |" % o["best_delta"],
               "| มัธยฐานส่วนต่าง | %+.4f |" % o["median_delta"],
               "| p−ask ≥ 0.05 / 0.10 / 0.15 / 0.20 / 0.30 | %d / %d / %d / %d / %d |" % tuple(o["thresholds"][str(t)] for t in (0.05, 0.10, 0.15, 0.20, 0.30)),
-              "| จังหวะที่เข้าเกณฑ์เทรด (ask 0.02–0.25 · p≥0.60 · p−ask≥0.15) | **%d** |" % len(o["tradable"]), ""]
+              "| จังหวะที่เข้าเกณฑ์เทรด (ask 0.02–0.25 · p≥0.60 · p−ask≥0.15) | **%d** |" % len(o["tradable"]),
+              "| bin ที่ p≥0.90 | %d อัน · ask ต่ำสุด %s · มัธยฐาน %s |" % (o["strong_bins"]["n"], o["strong_bins"]["ask_min"], o["strong_bins"]["ask_median"]), ""]
         L += ["**รายวัน**", "", "| วัน | คู่ | p>ask | ดีสุด |", "|---|---|---|---|"]
         for d, v in o["by_day"].items():
             L += ["| %s | %d | %d | %+.4f |" % (d, v["n"], v["pos"], v["best"])]
         L += ["", "**10 อันดับที่ส่วนต่างดีที่สุด (ยังไม่ถึงเกณฑ์เทรดก็ได้ — ดูแนวโน้ม)**", "",
               "| p−ask | เมือง | ชม. | bin | ask | p | เวลา |", "|---|---|---|---|---|---|---|"]
         for x in o["top"]:
-            L += ["| %+.4f | %s | %s | %s | %.3f | %.3f | %s |" % (x["delta"], x["city"], x["hour"], x["bin"], x["ask"], x["p"], x["ts"])]
+            L += ["| %+.4f | %s | %s | %s | %.3f | %s | %.3f | %s |" % (x["delta"], x["city"], x["hour"], x["bin"], x["ask"],
+                                                                         ("%.3f" % x["bid"]) if x.get("bid") is not None else "—", x["p"], x["ts"])]
     L += ["", "---", "",
           "**เกณฑ์ตีความ**: ถ้าคอลัมน์ `p > ask` ยังเป็น 0 ต่อเนื่องเป็นสัปดาห์ → โมเดลไม่มี edge เหนือราคาตลาด",
           "ที่ซื้อขายได้จริง และไม่ควรใช้เงินจริง (ดู `reports/live_reality_check.md`)", ""]

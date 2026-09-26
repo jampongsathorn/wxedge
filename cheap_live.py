@@ -484,7 +484,7 @@ def main():
                 rec = dict(ts=ts, city=r["city"], target=r["target"], local_time=r.get("local_time"), hour=r.get("hour"),
                            obs_so_far_c=r.get("obs_so_far_c"), mu_c=r.get("mu_c"), sigma_c=r.get("sigma_c"),
                            n_hist=r.get("n_hist"), max_so_far_c=r.get("obs_so_far_c"),
-                           bins=[[b["bin"], b["model_p"], b["ask"], b["bid"], int(b["vol"] or 0)] for b in r["bins"]])
+                           bins=[[b["bin"], b["model_p"], b["ask"], b["bid"], int(b["vol"] or 0), b.get("token_id")] for b in r["bins"]])
                 f.write(json.dumps(rec, ensure_ascii=False) + "\n")
                 n_snap += 1
         if n_snap:
