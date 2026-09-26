@@ -124,8 +124,8 @@ def summarize(rows, stake=100.0):
     o = dict(n=len(rows), resolved=len(res), yes=dict(n=0, w=0, pnl=0.0, cost=0.0),
              no=dict(n=0, w=0, pnl=0.0, cost=0.0), by_tier={}, by_city={}, brier=[], calib={})
     for r in res:
-        side = "YES" if r["side"] == "YES" else "no"
-        cost = num(r.get("yes_ask")) if side == "YES" else num(r.get("no_ask_implied"))
+        side = "yes" if str(r["side"]).upper() == "YES" else "no"   # key ใน o เป็นตัวพิมพ์เล็ก
+        cost = num(r.get("yes_ask")) if side == "yes" else num(r.get("no_ask_implied"))
         if cost is None:
             continue
         won = int(num(r["won"]) or 0)
@@ -142,7 +142,7 @@ def summarize(rows, stake=100.0):
         c["n"] += 1
         c["w"] += won
         c["pnl"] += (stake / cost - stake) if won else -stake
-        if side == "YES":
+        if side == "yes":
             p = num(r.get("model_p"))
             if p is not None:
                 o["brier"].append((p - won) ** 2)
@@ -153,8 +153,58 @@ def summarize(rows, stake=100.0):
     return o
 
 
+def money(v):
+    """รูปแบบเงินมี comma: +1,234 / -567 (Python %-format ไม่รองรับ comma → ใช้ format())"""
+    try:
+        return format(float(v), "+,.0f")
+    except (TypeError, ValueError):
+        return "0"
+
+
 def rate(d):
     return (100.0 * d["w"] / d["n"]) if d["n"] else float("nan")
+
+
+def render_report(o, stake=100.0, day=""):
+    """สร้างรายงาน markdown จาก o = summarize() — แยกออกมาเพื่อให้เทสต์ได้โดยไม่ต้องมีเน็ต
+    (บั๊ก 26 ก.ย. 2026: โค้ดเดิมฝังใน main() → เทสต์ไม่ได้ → พังเงียบจนมีไม้จริงไม้แรก)"""
+    L = ["# forward-test — ผลจริงจาก log (ไม่ใช่ backtest)", "",
+         "อัปเดต %s · แถวใน log %d · เฉลยแล้ว %d · stake $%.0f/ไม้ (ถือถึงเฉลย)" % (day, o["n"], o["resolved"], stake), ""]
+    if o["n"] == 0:
+        L += ["**ยังไม่มีข้อมูล** — log มีแค่หัวตาราง รอ cron เก็บไม้ (จะเริ่มมีเมื่อมีเมืองถึงเวลาเข้าไม้)", ""]
+    else:
+        L += ["| ฝั่ง | ไม้ | ชนะ | hit rate | ต้นทุนเฉลี่ย | PnL รวม |", "|---|---|---|---|---|---|",
+              "| YES | %d | %d | %.1f%% | %.3f | $%s |" % (o["yes"]["n"], o["yes"]["w"], rate(o["yes"]),
+                                                          (o["yes"]["cost"] / o["yes"]["n"]) if o["yes"]["n"] else float("nan"),
+                                                  money(o["yes"]["pnl"])),
+              "| NO | %d | %d | %.1f%% | %.3f | $%s |" % (o["no"]["n"], o["no"]["w"], rate(o["no"]),
+                                                           (o["no"]["cost"] / o["no"]["n"]) if o["no"]["n"] else float("nan"),
+                                                           money(o["no"]["pnl"])), ""]
+        if o["brier"] is not None:
+            L += ["**Brier score (YES, เทียบ p ของโมเดลกับผลจริง 0/1):** %.4f (ยิ่งต่ำยิ่งดี · 0.25 = เดาสุ่ม)" % o["brier"], ""]
+        if o["calib"]:
+            L += ["**Calibration ของ model_p (YES) — p ที่บอกควรตรงกับอัตราชนะจริง**", "",
+                  "| ช่วง p | ไม้ | ชนะ | จริง |", "|---|---|---|---|"]
+            for k in sorted(o["calib"]):
+                b = o["calib"][k]
+                L += ["| %.1f–%.1f | %d | %d | %.0f%% |" % (k, k + 0.1, b["n"], b["w"], 100.0 * b["w"] / b["n"])]
+            L += [""]
+        L += ["**แยกตามชั้นไม้**", "", "| ชั้น | ไม้ | ชนะ | hit rate | PnL |", "|---|---|---|---|---|"]
+        for t, d in sorted(o["by_tier"].items(), key=lambda kv: -kv[1]["n"]):
+            L += ["| %s | %d | %d | %.1f%% | $%s |" % (t, d["n"], d["w"], rate(d), money(d["pnl"]))]
+        L += ["", "**แยกตามเมือง (เฉพาะที่มีไม้)**", "", "| เมือง | ไม้ | ชนะ | hit rate | PnL |", "|---|---|---|---|---|"]
+        for c, d in sorted(o["by_city"].items(), key=lambda kv: -kv[1]["n"]):
+            L += ["| %s | %d | %d | %.1f%% | $%s |" % (c, d["n"], d["w"], rate(d), money(d["pnl"]))]
+        L += [""]
+    L += ["---", "",
+          "**เกณฑ์ผ่านก่อนใช้เงินจริง (จากรายงานกลยุทธ์)**",
+          "- log ≥ 50 ไม้ · hit rate จริง ≥ 85% (YES) และ NO ต้องไม่หลุดจาก 100% ในกติกาเดิม",
+          "- ต้นทุนจ่ายจริง (ask) ไม่แย่กว่าที่ stress ไว้ (+0.03)",
+          "- Brier (YES) ≤ 0.20 → p ของเราเชื่อถือได้",
+          "",
+          "หมายเหตุ: PnL ที่นี่ใช้ราคา ask/bid จริงตอนบันทึก log (ไม่ใช่ last trade) และถือถึงเฉลย ไม่มี TP",
+          "ข้อมูลดิบ: data/cheap_live_log.csv · snapshot การแจกแจง: data/snapshots/*.jsonl"]
+    return L
 
 
 def main():
@@ -172,42 +222,7 @@ def main():
 
     o = summarize(rows, a.stake)
     day = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%MZ")
-    L = ["# forward-test — ผลจริงจาก log (ไม่ใช่ backtest)", "",
-         "อัปเดต %s · แถวใน log %d · เฉลยแล้ว %d · stake $%.0f/ไม้ (ถือถึงเฉลย)" % (day, o["n"], o["resolved"], a.stake), ""]
-    if o["n"] == 0:
-        L += ["**ยังไม่มีข้อมูล** — log มีแค่หัวตาราง รอ cron เก็บไม้ (จะเริ่มมีเมื่อมีเมืองถึงเวลาเข้าไม้)", ""]
-    else:
-        L += ["| ฝั่ง | ไม้ | ชนะ | hit rate | ต้นทุนเฉลี่ย | PnL รวม |", "|---|---|---|---|---|---|",
-              "| YES | %d | %d | %.1f%% | %.3f | $%+,.0f |" % (o["yes"]["n"], o["yes"]["w"], rate(o["yes"]),
-                                                          (o["yes"]["cost"] / o["yes"]["n"]) if o["yes"]["n"] else float("nan"),
-                                                          o["yes"]["pnl"]),
-              "| NO | %d | %d | %.1f%% | %.3f | $%+,.0f |" % (o["no"]["n"], o["no"]["w"], rate(o["no"]),
-                                                           (o["no"]["cost"] / o["no"]["n"]) if o["no"]["n"] else float("nan"),
-                                                           o["no"]["pnl"]), ""]
-        if o["brier"] is not None:
-            L += ["**Brier score (YES, เทียบ p ของโมเดลกับผลจริง 0/1):** %.4f (ยิ่งต่ำยิ่งดี · 0.25 = เดาสุ่ม)", o["brier"], ""]
-        if o["calib"]:
-            L += ["**Calibration ของ model_p (YES) — p ที่บอกควรตรงกับอัตราชนะจริง**", "",
-                  "| ช่วง p | ไม้ | ชนะ | จริง |", "|---|---|---|---|"]
-            for k in sorted(o["calib"]):
-                b = o["calib"][k]
-                L += ["| %.1f–%.1f | %d | %d | %.0f%% |" % (k, k + 0.1, b["n"], b["w"], 100.0 * b["w"] / b["n"])]
-            L += [""]
-        L += ["**แยกตามชั้นไม้**", "", "| ชั้น | ไม้ | ชนะ | hit rate | PnL |", "|---|---|---|---|---|"]
-        for t, d in sorted(o["by_tier"].items(), key=lambda kv: -kv[1]["n"]):
-            L += ["| %s | %d | %d | %.1f%% | $%+,.0f |" % (t, d["n"], d["w"], rate(d), d["pnl"])]
-        L += ["", "**แยกตามเมือง (เฉพาะที่มีไม้)**", "", "| เมือง | ไม้ | ชนะ | hit rate | PnL |", "|---|---|---|---|---|"]
-        for c, d in sorted(o["by_city"].items(), key=lambda kv: -kv[1]["n"]):
-            L += ["| %s | %d | %d | %.1f%% | $%+,.0f |" % (c, d["n"], d["w"], rate(d), d["pnl"])]
-        L += [""]
-    L += ["---", "",
-          "**เกณฑ์ผ่านก่อนใช้เงินจริง (จากรายงานกลยุทธ์)**",
-          "- log ≥ 50 ไม้ · hit rate จริง ≥ 85% (YES) และ NO ต้องไม่หลุดจาก 100% ในกติกาเดิม",
-          "- ต้นทุนจ่ายจริง (ask) ไม่แย่กว่าที่ stress ไว้ (+0.03)",
-          "- Brier (YES) ≤ 0.20 → p ของเราเชื่อถือได้",
-          "",
-          "หมายเหตุ: PnL ที่นี่ใช้ราคา ask/bid จริงตอนบันทึก log (ไม่ใช่ last trade) และถือถึงเฉลย ไม่มี TP",
-          "ข้อมูลดิบ: data/cheap_live_log.csv · snapshot การแจกแจง: data/snapshots/*.jsonl"]
+    L = render_report(o, a.stake, day)
     os.makedirs(os.path.dirname(REPORT), exist_ok=True)
     open(REPORT, "w", encoding="utf-8").write("\n".join(L) + "\n")
     json.dump(o, open(STATS, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
