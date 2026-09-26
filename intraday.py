@@ -20,7 +20,7 @@ import wxedge as W
 HERE = os.path.dirname(os.path.abspath(__file__))
 
 
-def hourly_series(cfg, d0, d1, no_cache=False):
+def hourly_series(cfg, d0, d1, no_cache=False, ttl=3600):
     """{date: {hour: temp_c}} จาก METAR รายชั่วโมง (IEM)"""
     import io, json, urllib.parse
     d1 = d1 + timedelta(days=1)   # IEM ตัดวันสิ้นสุดออก → ขอเกินไป 1 วัน
@@ -29,7 +29,7 @@ def hourly_series(cfg, d0, d1, no_cache=False):
            "&report_type=3&missing=M&trace=T&direct=no"
            % (cfg["icao"], d0.year, d0.month, d0.day, d1.year, d1.month, d1.day,
               urllib.parse.quote(cfg["tz"])))
-    txt = W.http_get(url, ttl=3600, tag="iemh", no_cache=no_cache)
+    txt = W.http_get(url, ttl=ttl, tag="iemh", no_cache=no_cache)
     out = collections.defaultdict(dict)
     for row in csv.DictReader(io.StringIO(txt)):
         v = row.get("tmpc")

@@ -130,9 +130,9 @@ def parse_bin_num(label):
         nums[0] = -nums[0]
     if not nums:
         return (-math.inf, math.inf)
-    if "or below" in t:
+    if "or below" in t or "or lower" in t:          # ตลาดจริงใช้ "or below" / "or higher"
         return (-math.inf, nums[0])
-    if "or above" in t:
+    if "or above" in t or "or higher" in t:
         return (nums[0], math.inf)
     if len(nums) == 1:
         return (nums[0], nums[0])
@@ -145,7 +145,17 @@ def model_dist(cfg, city, day, hour, lookback=30):
     ⚠ no_cache=True เสมอ: บทเรียน 26 ก.ย. 2026 — cache 1 ชม. ของ hourly_series ทำให้ max-so-far
     เก่าได้ถึง 60 นาที (Dallas: จริง 92°F @15:53 แต่ระบบเห็น 89°F @16:00 → โมเดล p=0.97 ผิด bin)
     """
-    ser = I.hourly_series(cfg, day - timedelta(days=lookback + 2), day, no_cache=True)
+    # ── สดแต่ประหยัด: ประวัติ (≤ เมื่อวาน) ใช้ cache ได้ · "วันนี้" ดึงสดเสมอ (คำขอเล็ก = ไม่โดน 429) ──
+    #    บทเรียน 26 ก.ย. 2026: ถ้า cache ทั้งก้อน (เดิม ttl=3600) obs จะเก่าได้ถึง 60 นาที
+    #    แต่ถ้าดึงสดทั้งก้อน (32 วัน/ครั้ง) จะโดน IEM 429 → แยกเป็น 2 คำขอ
+    ser = I.hourly_series(cfg, day - timedelta(days=lookback + 2), day - timedelta(days=1),
+                          ttl=6 * 3600)                      # ประวัติ = ข้อมูลนิ่ง → cache 6 ชม.
+    try:
+        _fresh = I.hourly_series(cfg, day, day, no_cache=True, ttl=60)   # วันนี้ = ดึงสด (คำขอเล็ก)
+    except Exception:                                        # 429/เน็ตสะดุด → ถอยไปใช้ของเดิมใน cache
+        _fresh = I.hourly_series(cfg, day, day, ttl=3600)
+    for _d, _hh in (_fresh or {}).items():
+        ser[_d].update(_hh)
     key = day.isoformat()
     hist = sorted(d for d in ser if d < key)
     cur = {hh: v for hh, v in (ser.get(key) or {}).items() if hh <= hour}
