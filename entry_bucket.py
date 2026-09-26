@@ -34,9 +34,9 @@ def lo_hi(b):
         ns[0] = -ns[0]
     if not ns:
         return None, None
-    if "or below" in t:
+    if "or below" in t or "or lower" in t:          # ตลาดจริงใช้ "or below" / "or higher"
         return (-math.inf, ns[0])
-    if "or above" in t:
+    if "or above" in t or "or higher" in t:
         return (ns[0], math.inf)
     return (ns[0], ns[1] if len(ns) > 1 else ns[0])
 

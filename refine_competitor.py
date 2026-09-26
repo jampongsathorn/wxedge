@@ -35,9 +35,9 @@ def parse_bin(label, unit):
         nums[0] = -nums[0]
     if not nums:
         return (-math.inf, math.inf)
-    if "or below" in s:
+    if "or below" in s or "or lower" in s:          # ตลาดจริงใช้ "or below" / "or higher"
         return (-math.inf, nums[0])
-    if "or above" in s:
+    if "or above" in s or "or higher" in s:
         return (nums[0], math.inf)
     if len(nums) == 1:
         return (nums[0], nums[0])

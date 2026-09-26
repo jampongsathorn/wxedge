@@ -13,7 +13,7 @@
   python3 forward_resolve.py --no-net   # ห้ามยิงเน็ต (ใช้ market_labels.csv เท่านั้น)
   python3 forward_resolve.py --report-only   # ไม่แตะ log แค่คำนวณ/รายงานใหม่
 """
-import argparse, csv, json, math, os, sys
+import argparse, csv, json, math, os, re, sys
 from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 
@@ -39,6 +39,28 @@ def load_labels():
         except (ValueError, KeyError):
             continue
     return out
+
+
+def label_to_bounds(label):
+    """'30°C' / '92-93°F' / '23°C or below' / '33°C or higher' → (lo, hi, unit)
+
+    ใช้ตอนตลาดปิดแล้วแต่ยังไม่มี label ใน market_labels.csv → ยังได้ค่ากลาง bin มาเก็บได้
+    """
+    unit = "F" if "°F" in str(label) else "C"
+    t = str(label).replace("°C", " ").replace("°F", " ").replace("–", "-").strip()
+    neg = t.startswith("-")
+    nums = [float(x) for x in re.findall(r"\d+(?:\.\d+)?", t)]
+    if neg and nums:
+        nums[0] = -nums[0]
+    if not nums:
+        return (-math.inf, math.inf, unit)
+    if "or below" in t or "or lower" in t:          # ตลาดจริงใช้ "or below" / "or higher"
+        return (-math.inf, nums[0], unit)
+    if "or above" in t or "or higher" in t:
+        return (nums[0], math.inf, unit)
+    if len(nums) == 1:
+        return (nums[0], nums[0], unit)
+    return (nums[0], nums[1], unit)
 
 
 def mid_to_c(lo, hi, unit):
@@ -69,7 +91,9 @@ def resolve_row(r, labels, cfgs, no_net=False):
         except json.JSONDecodeError:
             continue
         if pr and float(pr[0]) > 0.5:
-            return dict(resolved_bin=m.get("groupItemTitle"), resolved_max_c=None)
+            lab = m.get("groupItemTitle")
+            lo, hi, unit = label_to_bounds(lab)
+            return dict(resolved_bin=lab, resolved_max_c=mid_to_c(lo, hi, unit))
     return None
 
 

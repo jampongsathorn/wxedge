@@ -316,6 +316,22 @@ else:
     _md = src[src.index("def model_dist"):src.index("def compute_p_exceed")]
     check("T9l model_dist แยก ประวัติ(cache 6 ชม.) กับ วันนี้(สด) + มี fallback",
           "ttl=6 * 3600" in _md and "no_cache=True" in _md and "except Exception" in _md)
+    check("T9m cheap_live อ่าน '33°C or higher' เป็น bin เปิดบน (inf)",
+          CL9.parse_bin_num("33°C or higher")[1] == float("inf")
+          and CL9.parse_bin_num("23°C or below")[0] == float("-inf"))
+    import forward_resolve as FR9
+    check("T9n forward_resolve อ่าน bin เปิดปลายเหมือนกัน (parity)",
+          FR9.label_to_bounds("33°C or higher")[1] == float("inf")
+          and FR9.label_to_bounds("23°C or below")[0] == float("-inf")
+          and FR9.label_to_bounds("92-93°F")[:2] == (92.0, 93.0))
+    _missing = []
+    for _f in ("cheap_live.py", "forward_resolve.py", "entry_bucket.py", "pnl_proof.py",
+               "strategy_full.py", "refine_competitor.py"):
+        _t = open(os.path.join(ROOT, _f), encoding="utf-8").read()
+        if "or higher" not in _t:
+            _missing.append(_f)
+    check("T9o ทุกไฟล์ที่แยกป้าย bin รองรับ 'or higher' (ตลาดจริงใช้คำนี้ ไม่ใช่ 'or above')",
+          not _missing, str(_missing))
     check("T9g มีเกต max_exceed ใน scan_city", "p_exceed\"] < max_exceed" in src or 'p_exceed"] < max_exceed' in src)
     check("T9h CLI มี --max-exceed", "--max-exceed" in src)
     check("T9i log มีคอลัมน์ p_exceed เป็นคอลัมน์สุดท้าย", CL9.LOG_COLS[-1] == "p_exceed", str(CL9.LOG_COLS[-1]))
