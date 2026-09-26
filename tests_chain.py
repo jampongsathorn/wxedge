@@ -343,6 +343,21 @@ else:
           "header=%d cols, LOG_COLS=%d" % (len(hdr), len(CL9.LOG_COLS)))
 
 
+# ── T10: edge monitor (วัด edge จากราคาจริง — บทเรียน 26 ก.ย.) ──
+print()
+print("T10 · edge_monitor (ราคา ask จริงจาก snapshot)")
+_runner = open(os.path.join(ROOT, "deploy", "run_forward_test.sh"), encoding="utf-8").read()
+check("T10a โซ่รัน edge_monitor ทุกรอบรายวัน", "edge_monitor.py" in _runner)
+rc = run([sys.executable, "edge_monitor.py"], cwd=ROOT)
+check("T10b edge_monitor รันได้แบบออฟไลน์ (ไม่ยิงเน็ต) rc=0", rc.returncode == 0, (rc.stderr or "")[:80])
+_rep = os.path.join(ROOT, "reports", "edge_monitor.md")
+check("T10c เขียนรายงาน + json", os.path.exists(_rep) and os.path.exists(os.path.join(ROOT, "data", "edge_monitor.json")))
+_txt = open(_rep, encoding="utf-8").read()
+check("T10d รายงานบอกจำนวนจังหวะ p>ask ชัดเจน", "จังหวะที่ p > ask" in _txt)
+_em = json.load(open(os.path.join(ROOT, "data", "edge_monitor.json"), encoding="utf-8"))
+check("T10e นับคู่ bin×เวลาได้จริง", _em["pairs"] > 0 and _em["positive"] <= _em["pairs"], str(_em.get("pairs")))
+check("T10f มีคอลัมน์ best/median delta", _em.get("best_delta") is not None and _em.get("median_delta") is not None)
+
 print()
 print("ผลรวม: %s" % ("ผ่านทั้งหมด ✓" if not fails else "ไม่ผ่าน %d รายการ: %s" % (len(fails), fails)))
 sys.exit(1 if fails else 0)
