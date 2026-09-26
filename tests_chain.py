@@ -313,6 +313,9 @@ else:
     src = open(os.path.join(ROOT, "cheap_live.py"), encoding="utf-8").read()
     check("T9f model_dist อ่าน obs แบบ no_cache (กัน cache 1 ชม. ทำ obs เก่า)",
           "no_cache=True" in src[src.index("def model_dist"):src.index("def compute_p_exceed")])
+    _md = src[src.index("def model_dist"):src.index("def compute_p_exceed")]
+    check("T9l model_dist แยก ประวัติ(cache 6 ชม.) กับ วันนี้(สด) + มี fallback",
+          "ttl=6 * 3600" in _md and "no_cache=True" in _md and "except Exception" in _md)
     check("T9g มีเกต max_exceed ใน scan_city", "p_exceed\"] < max_exceed" in src or 'p_exceed"] < max_exceed' in src)
     check("T9h CLI มี --max-exceed", "--max-exceed" in src)
     check("T9i log มีคอลัมน์ p_exceed เป็นคอลัมน์สุดท้าย", CL9.LOG_COLS[-1] == "p_exceed", str(CL9.LOG_COLS[-1]))
