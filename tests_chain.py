@@ -286,6 +286,44 @@ try:
 finally:
     shutil.rmtree(tmp, ignore_errors=True)
 
+# ── T9: regression ของบทเรียน 26 ก.ย. 2026 (ไม้จริง 2 ไม้แพ้: obs ล้าช้า + ตลาดรู้ก่อน) ──────
+print()
+print("T9 · P_exceed (ราคารวม bin ที่สูงกว่าเรา) + obs ต้องสด")
+import importlib.util as _ilu
+_sp = _ilu.spec_from_file_location("cheap_live_t9", os.path.join(ROOT, "cheap_live.py"))
+try:
+    import cheap_live as CL9
+except Exception:
+    CL9 = None
+if CL9 is None:
+    check("T9 โหลด cheap_live.py ได้", False, "import ล้ม")
+else:
+    bins = [{"bin": "88-89°F", "ask": 0.04}, {"bin": "90-91°F", "ask": 0.79},
+            {"bin": "92-93°F", "ask": 0.4}, {"bin": "84-85°F", "ask": 0.01}]
+    CL9.compute_p_exceed(bins)
+    by = {b["bin"]: b["p_exceed"] for b in bins}
+    check("T9a p_exceed = ผลรวม ask ของ bin ที่สูงกว่า (เคส Dallas จริง = 1.0)", by["88-89°F"] == 1.0, str(by))
+    check("T9b p_exceed ของ bin บนสุด = 0", by["92-93°F"] == 0.0, str(by["92-93°F"]))
+    check("T9c bin ล่างยังนับ bin บนทั้งหมด (0.01+0.04+0.79+0.4 capped ที่ 1.0)", by["84-85°F"] == 1.0)
+    check("T9d 'or above' ถือว่าเหนือกว่าทุก bin ปกติ → ตัวบนสุดได้ 0",
+          CL9.compute_p_exceed([{"bin": "88-89°F", "ask": 0.5}, {"bin": "92°F or above", "ask": 0.5}])[1]["p_exceed"] == 0.0)
+    _g = CL9.compute_p_exceed([{"bin": "ไม่ใช่ bin", "ask": 0.5}, {"bin": "90-91°F", "ask": 0.5}])
+    check("T9e bin ที่อ่านตัวเลขไม่ได้ → ถือว่าต่ำสุด (p_exceed สูง = ถูกกรองออก ปลอดภัยไว้ก่อน)",
+          _g[0]["p_exceed"] == 0.5 and _g[1]["p_exceed"] == 0.0, str([x["p_exceed"] for x in _g]))
+    src = open(os.path.join(ROOT, "cheap_live.py"), encoding="utf-8").read()
+    check("T9f model_dist อ่าน obs แบบ no_cache (กัน cache 1 ชม. ทำ obs เก่า)",
+          "no_cache=True" in src[src.index("def model_dist"):src.index("def compute_p_exceed")])
+    check("T9g มีเกต max_exceed ใน scan_city", "p_exceed\"] < max_exceed" in src or 'p_exceed"] < max_exceed' in src)
+    check("T9h CLI มี --max-exceed", "--max-exceed" in src)
+    check("T9i log มีคอลัมน์ p_exceed เป็นคอลัมน์สุดท้าย", CL9.LOG_COLS[-1] == "p_exceed", str(CL9.LOG_COLS[-1]))
+    import csv as _csv
+    hdr = next(_csv.reader(open(os.path.join(ROOT, "data", "cheap_live_log.csv"), encoding="utf-8")))
+    rp = open(os.path.join(ROOT, "reports", "forward_report.md"), encoding="utf-8").read()
+    check("T9k รายงาน forward ไม่มีคำว่า nan (โชว์ — แทน)", "nan" not in rp)
+    check("T9j header ของ log ตรงกับ LOG_COLS (schema ตรงกัน)", hdr == CL9.LOG_COLS,
+          "header=%d cols, LOG_COLS=%d" % (len(hdr), len(CL9.LOG_COLS)))
+
+
 print()
 print("ผลรวม: %s" % ("ผ่านทั้งหมด ✓" if not fails else "ไม่ผ่าน %d รายการ: %s" % (len(fails), fails)))
 sys.exit(1 if fails else 0)
