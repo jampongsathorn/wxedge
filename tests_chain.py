@@ -442,5 +442,38 @@ check("T16c execution_report ทนข้อมูลไม่ครบ (depth_l
       'if not os.path.exists(p):' in _src16 and "except Exception" in _src16)
 
 print()
+print("T17 · relay.py — กล่องข้อความ agent-to-agent (GitHub Issues)")
+import relay as R17
+_msg17 = R17.build_message("arena-wxedge", "other-agent", "หัวข้อทดสอบ",
+                           "บรรทัด 1\nบรรทัด 2 ไทย", tag="question", ts="2026-10-01T00:00:00Z")
+_c17 = R17.parse_message({"body": _msg17, "id": 7, "user": {"login": "someone"},
+                          "created_at": "2026-10-01T00:00:01Z", "html_url": "u"})
+check("T17a build→parse ครบ field (from/to/subject/tag) + ts คงเดิม",
+      _c17["from"] == "arena-wxedge" and _c17["to"] == "other-agent"
+      and _c17["subject"] == "หัวข้อทดสอบ" and _c17["tag"] == "question"
+      and _c17["ts"] == "2026-10-01T00:00:00Z")
+check("T17b body ถูกตัดหัวข้อที่ generate ซ้ำออก เหลือเนื้อหาเดิม",
+      _c17["body"] == "บรรทัด 1\nบรรทัด 2 ไทย", repr(_c17["body"][:40]))
+_c17b = R17.parse_message({"body": "พิมพ์เองไม่มี metadata", "id": 8, "user": {"login": "human"}})
+check("T17c comment ไม่มี metadata → from = login และ body คงเดิม",
+      _c17b["from"] == "human" and _c17b["body"] == "พิมพ์เองไม่มี metadata")
+_old17 = R17.STATE
+try:
+    _tmp17 = tempfile.mkdtemp()
+    R17.STATE = os.path.join(_tmp17, "relay_state.json")
+    R17.save_state(issue=1, last_read_id=555)
+    _st17 = R17.load_state()
+    check("T17d state save/load round-trip (issue + last_read_id)",
+          _st17.get("issue") == 1 and _st17.get("last_read_id") == 555, str(_st17))
+finally:
+    R17.STATE = _old17
+    shutil.rmtree(_tmp17, ignore_errors=True)
+_rc17 = run([sys.executable, "relay.py", "post", "--subject", "x", "--body", "y"],
+            env={"GITHUB_TOKEN": "", "GH_TOKEN": ""})
+check("T17e post ไม่มี token → ออกด้วยข้อความชัดเจน (ไม่ traceback)",
+      _rc17.returncode != 0 and "token" in (_rc17.stderr or "").lower()
+      and "Traceback" not in (_rc17.stderr or ""))
+
+print()
 print("ผลรวม: %s" % ("ผ่านทั้งหมด ✓" if not fails else "ไม่ผ่าน %d รายการ: %s" % (len(fails), fails)))
 sys.exit(1 if fails else 0)
