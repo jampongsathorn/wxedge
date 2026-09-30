@@ -68,6 +68,8 @@ def main():
     ap.add_argument("--window", default="14:30-17:30")
     ap.add_argument("--max-bins", type=int, default=3, help="จำนวน bin ต่อเมือง (เรียงตาม model_p)")
     ap.add_argument("--min-gap-sec", type=int, default=240, help="ข้ามถ้าเก็บ token นี้ไปแล้วภายใน N วินาที")
+    ap.add_argument("--levels", type=int, default=0,
+                    help="จำนวนระดับที่บันทึกลงไฟล์ (0 = ทั้งเล่มเท่าที่ API ส่งมา · slippage คำนวณจากทั้งเล่มเสมอ)")
     a = ap.parse_args()
 
     cfgs = json.load(open(W.STATIONS, encoding="utf-8"))
@@ -110,9 +112,11 @@ def main():
             asks, bids = book_full(tok)
             if asks is None:
                 continue
+            keep = a.levels if a.levels > 0 else None      # None = เก็บทั้งเล่ม
             rec = dict(ts=now_ts, city=city, bin=b[0], token=tok, local=local,
                        model_p=b[1], best_ask=(asks[0][0] if asks else None), best_bid=(bids[0][0] if bids else None),
-                       asks=asks[:25], bids=bids[:25], n_ask=len(asks), n_bid=len(bids),
+                       asks=(asks if keep is None else asks[:keep]), bids=(bids if keep is None else bids[:keep]),
+                       n_ask=len(asks), n_bid=len(bids),
                        depth_ask_usd=round(sum(p * s for p, s in asks), 1) if asks else 0.0,
                        slip_12=slippage_for(asks, 12.0), slip_100=slippage_for(asks, 100.0),
                        slip_500=slippage_for(asks, 500.0))

@@ -969,7 +969,10 @@ amsterdam 0.17 → 0.98 ใน ~2 ชม. · และ “หน้าต่า�
 
 ปิดช่อง 2 ช่องสุดท้ายที่เหลือ (อ้างอิงบทวิเคราะห์ภายนอกที่แนะนำให้ทำ order-book recorder + ใช้ราคา execute จริง)
 
-### A. `market_replay.py` — ย้อนตลาดที่ปิดแล้ว: "ถ้าเข้าไม้ตอนนั้น จ่ายได้จริงเท่าไร"
+### A. `market_replay.py` — **historical trade-executable replay** (ไม่ใช่ order-book replay)
+
+> คำให้แม่น: เครื่องนี้กู้ **เส้นทางการเทรดที่เกิดขึ้นจริง (executed-trade path)** จาก `data-api/trades`
+> — ไม่ใช่ historical L2 order book (คำสั่งค้างที่ไม่ถูก match ไม่มีในข้อมูลนี้)
 
 รัน: `python3 market_replay.py --city nyc --date 2026-09-14 --save` (ใช้ได้กับทุกเมือง/วัน)
 
@@ -983,9 +986,9 @@ amsterdam 0.17 → 0.98 ใน ~2 ชม. · และ “หน้าต่า�
 
 → ยืนยันกลไก "ราคาลวง" อีกครั้ง: bin ที่ backtest จะเข้าเพราะ last-trade 0.090 แท้จริงซื้อต้องจ่าย 0.853
 
-### B. `depth_probe.py` — เก็บ order book เต็มบันได (L2) ในหน้าต่างเข้าไม้
+### B. `depth_probe.py` — **live L2 ladder recorder (สำหรับตลาดในอนาคตเท่านั้น)**
 
-- เก็บ `data/depth_live.jsonl`: `asks[]`/`bids[]` ทุกระดับ (สูงสุด 25 ระดับ), depth รวม, และ **slippage ของ $12 / $100 / $500**
+- เก็บ `data/depth_live.jsonl`: `asks[]`/`bids[]` **ทั้งเล่ม** (ค่าเริ่มต้น `--levels 0` = ไม่ตัด; กำหนดเองได้ถ้าต้องการจำกัด), depth รวม, และ **slippage ของ $12 / $100 / $500**
 - ต่อเข้าโซ่แล้ว (หลัง `trades_probe`) — เก็บเฉพาะเมืองในหน้าต่าง 14:30–17:30 local · ข้ามถ้าเพิ่งเก็บใน 4 นาที
 - เทสต์ T13a–g (คณิต VWAP/slippage · บันไดไม่พอ · hook · ใช้ `in_window` ร่วมกัน ไม่คัดลอกโค้ด)
 - **ตรวจกับตลาดจริง (sao-paulo 30 ก.ย.)**: สมุดมี 22 ระดับ ask · depth เช่น 33°C = $614, 32°C = $746
@@ -995,3 +998,26 @@ amsterdam 0.17 → 0.98 ใน ~2 ชม. · และ “หน้าต่า�
 
 เทียบ `bestAsk` ที่ snapshot เก็บ (Gamma) กับ CLOB `/book` สด: **ต่างกันไม่เกิน ±0.013** ✓
 → ราคาใน snapshot เชื่อถือได้ ณ เวลาที่เก็บ · ที่เคยเห็นต่างกัน 0.30 คือ **ราคาเคลื่อนตามเวลา** (40 นาที) ไม่ใช่ข้อมูลเพี้ยน
+
+
+---
+
+## 30. ตรวจความแม่นของข้อมูล + execution_report (30 ก.ย. 2026)
+
+### A. `book_parity.py` — วัด Gamma vs CLOB **พร้อม timestamp** (ไม่สรุปจากการวัดครั้งเดียว)
+
+เก็บ `data/book_parity.jsonl`: `t_gamma` · `t_clob` · `delta_ms` · `diff_ask` · `diff_bid` · จำนวนระดับในสมุด
+→ แยกได้ว่า diff เกิดจาก "ราคาเคลื่อนตามเวลา" (delta_ms ใหญ่) หรือ "Gamma ค้าง" (delta_ms เล็กแต่ diff ใหญ่)
+
+**ผลวัด 12 คู่ (sao-paulo · buenos-aires · denver):** |diff ask| มัธยฐาน 0.005 · สูงสุด **0.080**
+- sao-paulo 33°C: diff −0.040 ที่ delta 781 ms → ราคาเคลื่อนตามเวลา
+- **denver 58-59°F: diff −0.080 ที่ delta_ms = 0** → **Gamma ค้าง** (ไม่ใช่เวลา) — ราคาเข้าต้องใช้ CLOB book เป็นหลัก
+
+### B. `execution_report.py` — เทียบ PnL 4 แบบ (หลักฐานระดับ execution)
+
+อ่าน `cheap_live_log.csv` + `trades_live.jsonl` + `depth_live.jsonl` → เทียบ:
+1) last-trade PnL (วิธีเก่า) · 2) best-ask ณ ตอนเข้า · 3) trade-replay (executed fills) · 4) ladder-VWAP (slippage)
+พร้อม fill/no-fill และ slippage ต่อไม้ · `--fetch` ดึงดีลย้อนหลังให้ไม้เก่าได้ (แคชเดียวกับ exec_backtest)
+
+**ผลกับ 2 ไม้จริงของเรา (25 ก.ย.):** ทั้งคู่ **no-fill** — dallas มีดีล YES ทั้งชีวิต 121 รายการ แต่ในช่วง 20 นาที
+หลังเวลาเข้า **ไม่มีดีลเลย** · panama 79 ดีล ก็ไม่มีในช่วงเช่นกัน → ยืนยันว่าไม้ทั้ง 2 เป็น **ราคาที่ซื้อไม่ได้จริง**
