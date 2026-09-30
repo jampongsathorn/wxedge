@@ -58,6 +58,7 @@ while [ "$(now_epoch)" -lt "$END" ]; do
       timeout 900 $PY -c "import cheap_live as C; C.build_universe(verbose=True)" || true
       timeout 600 $PY bidask_check.py --max-bins 90 || true
       timeout 600 $PY forward_resolve.py || true
+      timeout 600 $PY edge_monitor.py || true                # วัด edge จากราคาจริง (hook เดิมไปใส่ผิดไฟล์ → ไม่ได้รัน 4 วัน)
       touch data/.daily_done_$(date -u +%F)
     fi
   fi
