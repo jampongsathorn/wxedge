@@ -347,7 +347,9 @@ else:
 print()
 print("T10 · edge_monitor (ราคา ask จริงจาก snapshot)")
 _runner = open(os.path.join(ROOT, "deploy", "run_forward_test.sh"), encoding="utf-8").read()
-check("T10a โซ่รัน edge_monitor ทุกรอบรายวัน", "edge_monitor.py" in _runner)
+_loopsh = open(os.path.join(ROOT, "deploy", "chain_loop.sh"), encoding="utf-8").read()
+check("T10a โซ่รัน edge_monitor ทุกรอบรายวัน (ทั้งตัวรันจริงและ runner สำรอง)",
+      "edge_monitor.py" in _runner and "edge_monitor.py" in _loopsh)
 rc = run([sys.executable, "edge_monitor.py"], cwd=ROOT)
 check("T10b edge_monitor รันได้แบบออฟไลน์ (ไม่ยิงเน็ต) rc=0", rc.returncode == 0, (rc.stderr or "")[:80])
 _rep = os.path.join(ROOT, "reports", "edge_monitor.md")
