@@ -408,5 +408,28 @@ check("T13f โซ่ stage data/depth_live.jsonl", "data/depth_live.jsonl" in _
 check("T13g ใช้ in_window ร่วมกับ trades_probe (ตรรกะเดียว)", DP13.in_window is _iw)
 
 print()
+print("T14 · execution_report — PnL 4 แบบ + ข้อจำกัดที่เขียนให้แม่น")
+rc14 = run([sys.executable, "execution_report.py"], cwd=ROOT)
+check("T14a execution_report รันออฟไลน์ rc=0", rc14.returncode == 0, (rc14.stderr or "")[:80])
+_rp14 = open(os.path.join(ROOT, "reports", "execution_report.md"), encoding="utf-8").read()
+check("T14b ครบ 4 แบบ PnL", all(k in _rp14 for k in ("1) last-trade", "2) best-ask", "3) trade-replay", "4) ladder-VWAP")))
+check("T14c ระบุข้อจำกัด executed-trade path (ไม่ใช่ order book)", "executed-trade path" in _rp14)
+_src14 = open(os.path.join(ROOT, "execution_report.py"), encoding="utf-8").read()
+check("T14d มีโหมด --fetch สำหรับไม้เก่า", "--fetch" in _src14)
+
+print()
+print("T15 · book_parity + depth_probe --levels")
+_dp15 = open(os.path.join(ROOT, "depth_probe.py"), encoding="utf-8").read()
+check("T15a depth_probe มี --levels และค่าเริ่มต้น 0 (ทั้งเล่ม)", '"--levels", type=int, default=0' in _dp15)
+check("T15b ไม่มีการตัด 25 ระดับแบบตายตัว", "asks[:25]" not in _dp15 and "bids[:25]" not in _dp15)
+_bp15 = open(os.path.join(ROOT, "book_parity.py"), encoding="utf-8").read()
+check("T15c book_parity เก็บ t_gamma/t_clob/delta_ms", all(k in _bp15 for k in ("t_gamma", "t_clob", "delta_ms")))
+import json as _json15
+_pj = os.path.join(ROOT, "data", "book_parity.jsonl")
+_rows15 = [_json15.loads(l) for l in open(_pj, encoding="utf-8") if l.strip()] if os.path.exists(_pj) else []
+check("T15d book_parity.jsonl มีข้อมูลจริง + ฟิลด์ครบ",
+      len(_rows15) > 0 and all(k in _rows15[0] for k in ("delta_ms", "diff_ask", "n_ask")), "n=%d" % len(_rows15))
+
+print()
 print("ผลรวม: %s" % ("ผ่านทั้งหมด ✓" if not fails else "ไม่ผ่าน %d รายการ: %s" % (len(fails), fails)))
 sys.exit(1 if fails else 0)
