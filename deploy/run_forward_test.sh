@@ -29,6 +29,7 @@ if [ "${DAILY:-0}" = "1" ]; then
   $PY bidask_check.py --max-bins 90 || true
   $PY forward_resolve.py || true
   $PY edge_monitor.py || true                          # วัด edge จากราคา ask จริง (กันกลับไปเชื่อราคา stale)
+  $PY execution_report.py --fetch || true               # ตาราง PnL 4 แบบ + fill/slippage (autorun รายวัน)
   $PY build_monitor.py --quiet || true                 # สร้างหน้า monitor ให้สดใหม่
   [ -n "${MONITOR_PAT:-}" ] && bash deploy/publish_monitor.sh || true
 else
