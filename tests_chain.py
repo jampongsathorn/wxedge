@@ -394,5 +394,19 @@ _cl = open(os.path.join(ROOT, "cheap_live.py"), encoding="utf-8").read()
 check("T12f snapshot เก็บ token_id (ธาตุที่ 6)", 'b.get("token_id")' in _cl)
 
 print()
+print("T13 · depth_probe — L2 ladder + slippage")
+import depth_probe as DP13
+from trades_probe import in_window as _iw
+check("T13a slippage คำนวณถูกกับบันไดเดียว", abs(DP13.slippage_for([[0.50, 1000]], 12.0)[0] - 0.50) < 1e-9)
+_l = DP13.slippage_for([[0.20, 10], [0.40, 1000]], 12.0)     # ใช้ 0.20×10=$2 แล้วที่เหลือ 0.40
+check("T13b slippage ไล่หลายระดับถูกต้อง (VWAP 0.3433)", _l and abs(_l[0] - (12.0 / (10 + 25))) < 1e-6, str(_l))
+check("T13c บันไดไม่พอกับ notional → None", DP13.slippage_for([[0.50, 1]], 500.0) is None)
+check("T13d book ว่าง → ([], []) ไม่ใช่ None", DP13.book_full("") == (None, None) or DP13.book_full(" ") is not None)
+_loop2 = open(os.path.join(ROOT, "deploy", "chain_loop.sh"), encoding="utf-8").read()
+check("T13e โซ่เรียก depth_probe ทุกรอบเข้าไม้", "depth_probe.py" in _loop2)
+check("T13f โซ่ stage data/depth_live.jsonl", "data/depth_live.jsonl" in _loop2)
+check("T13g ใช้ in_window ร่วมกับ trades_probe (ตรรกะเดียว)", DP13.in_window is _iw)
+
+print()
 print("ผลรวม: %s" % ("ผ่านทั้งหมด ✓" if not fails else "ไม่ผ่าน %d รายการ: %s" % (len(fails), fails)))
 sys.exit(1 if fails else 0)
