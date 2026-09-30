@@ -431,5 +431,16 @@ check("T15d book_parity.jsonl มีข้อมูลจริง + ฟิล�
       len(_rows15) > 0 and all(k in _rows15[0] for k in ("delta_ms", "diff_ask", "n_ask")), "n=%d" % len(_rows15))
 
 print()
+print("T16 · execution_report autorun รายวัน (อนุมัติ 1 ต.ค. 2026)")
+_runner16 = open(os.path.join(ROOT, "deploy", "run_forward_test.sh"), encoding="utf-8").read()
+check("T16a โซ่จริง (chain_loop.sh) รัน execution_report ใน daily block",
+      "execution_report.py --fetch" in _loop2)
+check("T16b runner สำรอง (run_forward_test.sh) รัน execution_report ด้วย",
+      "execution_report.py --fetch" in _runner16)
+_src16 = open(os.path.join(ROOT, "execution_report.py"), encoding="utf-8").read()
+check("T16c execution_report ทนข้อมูลไม่ครบ (depth_live.jsonl หายได้ + try/except ตอน fetch)",
+      'if not os.path.exists(p):' in _src16 and "except Exception" in _src16)
+
+print()
 print("ผลรวม: %s" % ("ผ่านทั้งหมด ✓" if not fails else "ไม่ผ่าน %d รายการ: %s" % (len(fails), fails)))
 sys.exit(1 if fails else 0)
