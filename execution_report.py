@@ -75,7 +75,13 @@ def main():
     a = ap.parse_args()
     cfgs = json.load(open(W.STATIONS, encoding="utf-8"))
     log = load_log()
-    trades = load_jsonl(TRADES)
+    # provenance: ใช้เฉพาะดีลรูปแบบใหม่ (src=market · มี asset/cond) — แถวเก่า (asset_id bug,
+    # global feed) ถูกถอนทิ้ง 1 ต.ค. 2026 (README §33) ถ้ามีตกค้างในไฟล์ ให้ข้าม + นับไว้
+    raw_trades = load_jsonl(TRADES)
+    trades = [t for t in raw_trades if t.get("asset")]
+    legacy = len(raw_trades) - len(trades)
+    if legacy:
+        print("⚠ ข้ามดีลรูปแบบเก่า %d แถว (ไม่มี provenance — ดู README §33)" % legacy)
     depth = load_jsonl(DEPTH)
 
     rows = []

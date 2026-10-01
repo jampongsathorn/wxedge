@@ -1,0 +1,110 @@
+{
+ "F_quality": {
+  "trade_rows": 3,
+  "legacy_rows_excluded": 0,
+  "in_book_yes": 0,
+  "in_book_no": 0,
+  "in_book_unknown": 3,
+  "in_book_pct": null,
+  "depth_rows": 2495,
+  "depth_tokens": 136,
+  "trade_tokens": 2,
+  "join_tokens": 2
+ },
+ "A_activity": {
+  "sampled_rows_joinable": 42,
+  "skipped_censored": 0,
+  "active_rows": 0,
+  "active_pct": 0.0,
+  "near_ask_agreement_pct": null,
+  "evidence_12usd_at_ask_pct": 0.0,
+  "evidence_12usd_at_ladder_pct": 0.0,
+  "ladder_rows": 42,
+  "window_min": 20,
+  "stake": 12.0
+ },
+ "B_capacity": {
+  "0.00–0.10": {
+   "n": 1591,
+   "depth_median_usd": 24698.8,
+   "depth_p10_usd": 6671.9,
+   "usd12_pct": 100.0,
+   "usd100_pct": 100.0,
+   "usd500_pct": 96.0,
+   "slip12_median": 0.0006,
+   "slip100_median": 0.0099
+  },
+  "0.10–0.25": {
+   "n": 83,
+   "depth_median_usd": 721.8,
+   "depth_p10_usd": 461.9,
+   "usd12_pct": 100.0,
+   "usd100_pct": 100.0,
+   "usd500_pct": 84.3,
+   "slip12_median": 0.0236,
+   "slip100_median": 0.2423
+  },
+  "0.25–0.50": {
+   "n": 48,
+   "depth_median_usd": 594.1,
+   "depth_p10_usd": 535.6,
+   "usd12_pct": 100.0,
+   "usd100_pct": 100.0,
+   "usd500_pct": 97.9,
+   "slip12_median": 0.0085,
+   "slip100_median": 0.2198
+  },
+  "0.50–1.01": {
+   "n": 773,
+   "depth_median_usd": 723.6,
+   "depth_p10_usd": 256.6,
+   "usd12_pct": 98.4,
+   "usd100_pct": 97.3,
+   "usd500_pct": 71.5,
+   "slip12_median": 0.0,
+   "slip100_median": 0.0008
+  }
+ },
+ "C_mm": {
+  "n_two_sided": 1151,
+  "spread_median": 0.009,
+  "spread_p25": 0.004,
+  "spread_p75": 0.05,
+  "spread_ge2tick_pct": 92.0,
+  "toq_ask_median_usd": 12.6,
+  "toq_bid_median_usd": 12.1
+ },
+ "D_zone": {
+  "rows": 25,
+  "tokens": 4,
+  "cities": 4,
+  "top_cities": [
+   [
+    "kuala-lumpur",
+    18
+   ],
+   [
+    "toronto",
+    3
+   ],
+   [
+    "milan",
+    3
+   ],
+   [
+    "seattle",
+    1
+   ]
+  ],
+  "median_depth_usd": 24701.7,
+  "median_ask": 0.001,
+  "joinable": 0
+ },
+ "E_dynamics": {
+  "n_moves": 2287,
+  "abs_move_median": 0.0,
+  "moved_pct": 22.1,
+  "up_pct": 52.8,
+  "big_move_ge5c_pct": 5.2
+ }
+}

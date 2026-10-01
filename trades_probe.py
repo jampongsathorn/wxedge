@@ -5,6 +5,12 @@
 (เคสจริง: dallas บันทึก ask 0.04 แต่ไม่มีดีลเลยหลัง 16:00) — ดีลจริงคือหลักฐานว่า "ซื้อได้จริง"
 เก็บลง data/trades_live.jsonl (dedupe ด้วย txHash+asset+t+size+price) แล้วโซ่ push ขึ้น GitHub
 
+⛔ บทเรียนราคาแพง (พบ 1 ต.ค. 2026): **ห้ามใช้ `?asset_id=` กับ data-api** — มันเพิกเฉย param นี้
+แล้วคืน "global trade feed" (ทดสอบ: asset_id=NOT_A_REAL_TOKEN → ยังได้ 5 rows; asset_id=<token จริง>
+→ ได้ 28 asset อื่น + ตลาด BTC ปนมา) ทำให้ข้อมูล 80,000 แถวแรก (26 ก.ย.–1 ต.ค.) ใช้ไม่ได้ทั้งไฟล์
+ต้องล้างทิ้ง · ทางที่ถูก = `?market=<conditionId>&limit=N` (คืนเฉพาะตลาดนั้น แล้วกรอง asset = YES token)
+ทุกแถวใหม่มี provenance: src="market" · asset · cond → ตรวจย้อนได้
+
 รัน: python3 trades_probe.py --log
 จบเร็วเมื่อไม่มีเมืองในหน้าต่าง (เรียกได้ทุก 5 นาทีโดยไม่มีค่าใช้จ่าย)
 """
@@ -53,16 +59,42 @@ def recent(trades, since_ts):
     return out
 
 
-def fetch_asset_trades(token, limit=100):
-    q = "%s?asset_id=%s&limit=%d" % (API, token, limit)
+def fetch_market_trades(cond, limit=500):
+    """ดีล "ล่าสุด" ของตลาดเดียว (conditionId) เรียงตามเวลา
+
+    ⚠️ ต้องเป็น market= เท่านั้น — asset_id= ถูกเพิกเฉย (global feed) ดู docstring หัวไฟล์
+    """
+    q = "%s?market=%s&limit=%d" % (API, cond, limit)
     for attempt in range(3):
         try:
-            return json.loads(urllib.request.urlopen(urllib.request.Request(q, headers=UA), timeout=45).read().decode())
+            got = json.loads(urllib.request.urlopen(urllib.request.Request(q, headers=UA), timeout=45).read().decode())
+            return got if isinstance(got, list) else []
         except Exception:
             if attempt == 2:
                 return []
             time.sleep(1.5)
     return []
+
+
+def keep_token_rows(rows, token, token_no=None):
+    """เหลือเฉพาะดีลของ YES token นี้ → (kept, n_other, n_weird)
+
+    n_other  = ดีลของ NO token ของตลาดเดียวกัน (ปกติ — ไม่เก็บ เพราะเราซื้อ YES)
+    n_weird  = ดีลที่ asset ไม่ใช่ทั้ง YES/NO ของตลาดนี้ = สัญญาณ param เพี้ยนอีก (ต้องเป็น 0)
+    """
+    ok = {str(token)}
+    if token_no:
+        ok.add(str(token_no))
+    kept, other, weird = [], 0, 0
+    for t in rows:
+        a = str(t.get("asset") or "")
+        if a == str(token):
+            kept.append(t)
+        elif a in ok:
+            other += 1
+        else:
+            weird += 1
+    return kept, other, weird
 
 
 def latest_rows():
@@ -112,8 +144,7 @@ def main():
     if not picked:
         print("ไม่มีเมืองในหน้าต่าง %s — ไม่เก็บ" % a.window)
         return
-    # token: ใช้จาก snapshot (ธาตุที่ 6) ถ้าไม่มี → meta จาก exec_backtest (แคช)
-    meta_fn = None
+    # token จาก snapshot (ธาตุที่ 6) · cond จาก meta ของ exec_backtest (แคชต่อ city/วัน)
     keys = set()
     if a.log and os.path.exists(OUT):
         for line in open(OUT, encoding="utf-8"):
@@ -122,40 +153,41 @@ def main():
             except json.JSONDecodeError:
                 continue
     since = int((now - timedelta(seconds=a.within_sec)).timestamp())
-    added = 0
+    added = anomaly = 0
     f = open(OUT, "a", encoding="utf-8") if a.log else None
+    import exec_backtest as EB                       # แคช meta ต่อ (city, date) — ยิง Gamma ครั้งเดียว/เมือง/วัน
     for city, r, bins in picked:
-        need_meta = any(len(b) < 6 or not b[5] for b in bins)
-        if need_meta and meta_fn is None:
-            import exec_backtest as EB
-            meta_fn = EB.market_meta
-        meta = {}
-        if need_meta:
-            try:
-                meta = meta_fn(city, r.get("target") or datetime.now(ZoneInfo(cfgs[city]["tz"])).date().isoformat())
-            except Exception:
-                meta = {}
+        target = r.get("target") or datetime.now(ZoneInfo(cfgs[city]["tz"])).date().isoformat()
+        try:
+            meta = EB.market_meta(city, target) or {}
+        except Exception:
+            meta = {}
         for b in bins:
             lab = b[0]
-            token = b[5] if len(b) >= 6 else (meta.get(lab) or {}).get("token")
-            if not token:
+            m = meta.get(lab) or {}
+            token = b[5] if len(b) >= 6 and b[5] else m.get("token")
+            cond = m.get("cond")
+            if not token or not cond:                # ไม่มี conditionId → ยิงไม่ได้ (snapshot เพียว ๆ ไม่พอ)
                 continue
-            trs = recent(fetch_asset_trades(token), since)
-            for t in trs:
+            kept, _other, weird = keep_token_rows(fetch_market_trades(cond), token, m.get("token_no"))
+            anomaly += weird                         # >0 = ได้ดีลที่ไม่ใช่ YES/NO ของตลาดนี้ = param เพี้ยนอีก
+            for t in recent(kept, since):
                 k = dedupe_key(t)
                 if k in keys:
                     continue
                 keys.add(k)
                 rec = dict(ts_collected=now.strftime("%Y-%m-%dT%H:%M:%SZ"), city=city, bin=lab, token=token,
                            t=int(t.get("timestamp", 0)), side=t.get("side"), price=t.get("price"),
-                           size=t.get("size"), tx=t.get("transactionHash"), local=lt.strftime("%H:%M"))
+                           size=t.get("size"), tx=t.get("transactionHash"), local=lt.strftime("%H:%M"),
+                           src="market", asset=str(t.get("asset") or ""), cond=cond)   # provenance
                 if f:
                     f.write(json.dumps(rec, ensure_ascii=False) + "\n")
                     added += 1
             time.sleep(0.15)
     if f:
         f.close()
-    print("เก็บดีลใหม่ %d รายการ จาก %d เมือง" % (added, len(picked)))
+    print("เก็บดีลใหม่ %d รายการ จาก %d เมือง%s" % (
+        added, len(picked), (" · ⚠ anomaly %d bin (ได้ดีลแต่ไม่ใช่ token เรา — ตรวจ param!)" % anomaly) if anomaly else ""))
 
 
 if __name__ == "__main__":

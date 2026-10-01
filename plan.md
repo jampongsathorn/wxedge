@@ -40,3 +40,24 @@
 3. `check`/`mark` ทำงานตาม state (unread → 0 หลัง mark)
 4. T17a–e เขียว · T1–T16 เดิมไม่แตก
 5. push แล้ว remote มี relay.py/RELAY.md/issue URL ใช้ได้จริง
+
+---
+
+# plan.md — ถอน fills ปนเปื้อน + แก้ trades_probe (1 ต.ค. 2026)
+
+ตาม skill `agentic-code-workflow` · **สาเหตุ**: ระหว่างทำ `analyze.py` พบดีลหลายราคาในวินาทีเดียว
+ขัดกับสมุด → ทดสอบ API พบ `?asset_id=` ถูกเพิกเฉย (คืน global feed) → ข้อมูล 80,000 แถวโมฆะ
+
+## Steps (ทำแล้ว)
+
+1. ทดสอบยืนยัน 3 ทาง (garbage token · token จริง · market=cond) → root cause ชัด
+2. `trades_probe.py`: `fetch_market_trades(cond)` + `keep_token_rows(token, token_no)` + provenance
+   (`src/asset/cond`) + anomaly counter
+3. ล้าง `data/trades_live.jsonl` (80,000 แถว) — เริ่มสะสมใหม่ด้วยรูปแบบที่มี provenance
+4. Guards: `analyze.py` + `execution_report.py` ข้ามแถวเก่าอัตโนมัติ
+5. เทสต์ T18a–f + รัน E2E จริง (ได้แถว provenance ครบ · asset==token · ราคา 0.996–0.999)
+
+## ค้างไว้ (ตัวเลือก)
+
+- rebuild fills ย้อนหลังที่ถูกต้อง (จาก token ใน snapshot + cond จาก Gamma cache) — ยังไม่ทำ
+- ตัวเลข fills-เก่าที่เคยรายงาน (trade-replay, "at or below ask") — ใช้ไม่ได้ อย่าอ้าง
