@@ -121,7 +121,7 @@ footer{border-top:1px solid var(--line);margin-top:40px;padding:18px 0 calc(24px
 <div class="cards grid">
 <div class="card"><h3>ความคืบหน้า 5 ข้อ</h3><div class="gate">
 <div class="row"><span class="mark done" aria-hidden="true">✓</span><div><strong>1. หลักฐาน backtest</strong><div class="sub">379 ไม้ · 93.9% ชนะ · $201,884</div><div class="sub" style="color:var(--muted2)">พิสูจน์ที่มาได้ทีละไม้ (pnl_proof 5 ชั้น ผ่านหมด)</div></div></div>
-<div class="row"><span class="mark progress" aria-hidden="true">…</span><div><strong>2. หลักฐาน bid/ask จริง</strong><div class="sub">วัดได้ 90 bins (ask−last median 0.0100)</div><div class="sub" style="color:var(--muted2)">ต้องมี log ตอน 16:00 local + depth จริง (log v3 เก็บแล้ว)</div></div></div>
+<div class="row"><span class="mark progress" aria-hidden="true">…</span><div><strong>2. หลักฐาน bid/ask จริง</strong><div class="sub">วัดได้ 90 bins (ask−last median 0.0065)</div><div class="sub" style="color:var(--muted2)">ต้องมี log ตอน 16:00 local + depth จริง (log v3 เก็บแล้ว)</div></div></div>
 <div class="row"><span class="mark progress" aria-hidden="true">…</span><div><strong>3. forward-test จริง ≥ 50 ไม้ · ชนะ ≥ 85%</strong><div class="sub">2/50 ไม้ settled · ชนะ 0.0%</div><div class="sub" style="color:var(--muted2)">เก็บจากตลาดจริงด้วยราคาที่จ่ายจริง</div></div></div>
 <div class="row"><span class="mark manual" aria-hidden="true">?</span><div><strong>4. เงินทุน ≥ min-cap + 20%</strong><div class="sub">ต้องยืนยันเอง (min-cap ≈ $959 จากไม้ที่แพงสุด → เป้า ~$1,200)</div><div class="sub" style="color:var(--muted2)">กัน drawdown 15% ของแผน sizing</div></div></div>
 <div class="row"><span class="mark manual" aria-hidden="true">?</span><div><strong>5. บัญชีเทรดพร้อม</strong><div class="sub">ต้องยืนยันเอง (Polymarket + USDC บน Polygon + ภูมิภาคที่ใช้ได้)</div><div class="sub" style="color:var(--muted2)">เช็ค ToS/ภูมิภาคก่อนฝากเงิน</div></div></div>
@@ -129,12 +129,12 @@ footer{border-top:1px solid var(--line);margin-top:40px;padding:18px 0 calc(24px
 <div class="card"><h3>ไม้จริงที่ต้องเก็บ (เป้า 50)</h3>
 <div class="barwrap"><div class="barlabel"><span>settled แล้ว</span><span class="bnum">2 / 50</span></div><div class="track" role="progressbar" aria-label="settled แล้ว" aria-valuenow="4" aria-valuemin="0" aria-valuemax="100"><div class="fill " style="width:4.0%"></div></div><div class="bartarget">เป้า: settle แล้วนับอัตโนมัติจาก forward_resolve.py</div></div>
 <div class="barwrap"><div class="barlabel"><span>อัตราชนะจริง</span><span class="bnum">0.0%</span></div><div class="track" role="progressbar" aria-label="อัตราชนะจริง" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"><div class="fill warn" style="width:0.0%"></div></div><div class="bartarget">เป้า: ต้อง ≥ 85% ตอนครบ 50 ไม้</div></div>
-<div class="barwrap"><div class="barlabel"><span>ข้อมูลดิบที่เก็บได้</span><span class="bnum">5102 snapshot (เมือง×รอบ)</span></div><div class="track" role="progressbar" aria-label="ข้อมูลดิบที่เก็บได้" aria-valuenow="100" aria-valuemin="0" aria-valuemax="100"><div class="fill " style="width:100.0%"></div></div><div class="bartarget">เป้า: เป้า 200 = 33 เมือง × ~2 วันครึ่ง</div></div>
+<div class="barwrap"><div class="barlabel"><span>ข้อมูลดิบที่เก็บได้</span><span class="bnum">6059 snapshot (เมือง×รอบ)</span></div><div class="track" role="progressbar" aria-label="ข้อมูลดิบที่เก็บได้" aria-valuenow="100" aria-valuemin="0" aria-valuemax="100"><div class="fill " style="width:100.0%"></div></div><div class="bartarget">เป้า: เป้า 200 = 33 เมือง × ~2 วันครึ่ง</div></div>
 </div>
 <div class="card"><h3>สถานะ pipeline</h3>
 <p class="sub">รอบถัดไป: <strong id="nextRun">—</strong></p>
 <p class="sub">log เริ่มเก็บ: <time datetime="2026-09-25T21:00:03Z">2026-09-25T21:00:03Z</time></p>
-<p class="sub">สร้างหน้านี้: <time datetime="2026-09-30T18:05:06Z">2026-09-30T18:05:06Z</time></p>
+<p class="sub">สร้างหน้านี้: <time datetime="2026-10-01T16:15:11Z">2026-10-01T16:15:11Z</time></p>
 <p class="sub" id="live" aria-live="polite">ข้อมูลฝังในหน้า ณ เวลาที่สร้าง — กด “โหลดใหม่” เพื่อดึงล่าสุด</p>
 </div></div></section>
 <section id="kpi" aria-labelledby="kpiH"><h2 id="kpiH">KPI หลัก</h2><div class="grid kpis">
@@ -142,7 +142,7 @@ footer{border-top:1px solid var(--line);margin-top:40px;padding:18px 0 calc(24px
 <div class="card"><h3>อัตราชนะจริง</h3><div class="kpi amb">0.0%</div><div class="sub">YES 0.0% · NO —</div></div>
 <div class="card"><h3>Backtest PnL (หลักฐาน)</h3><div class="kpi pos">$201,884</div><div class="sub">379 ไม้ · ชนะ 93.9% · ROI +533% · stake $100</div></div>
 <div class="card"><h3>Drawdown สูงสุด (backtest)</h3><div class="kpi">$200</div><div class="sub">0.53% ของเงินที่วางทั้งหมด · ไม้แพ้ติดกันสูงสุด 2</div></div>
-<div class="card"><h3>ช่องว่าง ask−last (วัดจริง)</h3><div class="kpi">0.0100</div><div class="sub">median จาก 90 bins · spread median 0.0200<br>วัดเมื่อ <time datetime="2026-09-30T03:20:40.687775Z">2026-09-30</time></div></div>
+<div class="card"><h3>ช่องว่าง ask−last (วัดจริง)</h3><div class="kpi">0.0065</div><div class="sub">median จาก 90 bins · spread median 0.0160<br>วัดเมื่อ <time datetime="2026-10-01T03:20:35.789226Z">2026-10-01</time></div></div>
 <div class="card"><h3>Brier score (ความน่าเชื่อถือ p)</h3><div class="kpi">0.9341</div><div class="sub">จากไม้ settled ที่มี model_p · ยิ่งต่ำยิ่งดี (0.25 = เดาสุ่ม)</div></div>
 </div></section>
 <section id="forward" aria-labelledby="fwH"><h2 id="fwH">Forward-test — ผลจริงจากตลาด</h2>
@@ -162,7 +162,8 @@ footer{border-top:1px solid var(--line);margin-top:40px;padding:18px 0 calc(24px
 <tr><td><time datetime="2026-09-27T00:00:00Z" data-dateonly="1">2026-09-27</time></td><td>960</td></tr>
 <tr><td><time datetime="2026-09-28T00:00:00Z" data-dateonly="1">2026-09-28</time></td><td>850</td></tr>
 <tr><td><time datetime="2026-09-29T00:00:00Z" data-dateonly="1">2026-09-29</time></td><td>1098</td></tr>
-<tr><td><time datetime="2026-09-30T00:00:00Z" data-dateonly="1">2026-09-30</time></td><td>625</td></tr>
+<tr><td><time datetime="2026-09-30T00:00:00Z" data-dateonly="1">2026-09-30</time></td><td>1003</td></tr>
+<tr><td><time datetime="2026-10-01T00:00:00Z" data-dateonly="1">2026-10-01</time></td><td>579</td></tr>
 </tbody></table></div>
 </section>
 <section id="backtest" aria-labelledby="btH"><h2 id="btH">Backtest — หลักฐาน 379 ไม้</h2>
@@ -171,8 +172,8 @@ footer{border-top:1px solid var(--line);margin-top:40px;padding:18px 0 calc(24px
 <tr><td>รวมทั้งหมด</td><td>379</td><td>356</td><td>93.9%</td><td class="pos">+$201,884</td><td>100.0%</td></tr>
 </tbody></table></div>
 <h3 style="margin-top:16px">Stress: ถ้าจ่ายแพงกว่าราคาที่บันทึก</h3><div class="tblwrap"><table><caption>คิดใหม่หลังหักช่องว่าง ask ที่วัดได้ (แหล่ง: reports/bidask_check.md)</caption><thead><tr><th scope="col">สมมติฐานต้นทุน</th><th scope="col">PnL</th><th scope="col">เทียบฐาน</th></tr></thead><tbody>
-<tr><td>+ median ที่วัดได้ (+0.0060)</td><td class="pos">+$175,669</td><td class="neg">$-26,215</td></tr>
-<tr><td>+ p90 ที่วัดได้ (+0.0200)</td><td class="pos">+$148,545</td><td class="neg">$-53,339</td></tr>
+<tr><td>+ median ที่วัดได้ (+0.0060)</td><td class="pos">+$183,827</td><td class="neg">$-18,057</td></tr>
+<tr><td>+ p90 ที่วัดได้ (+0.0200)</td><td class="pos">+$156,467</td><td class="neg">$-45,417</td></tr>
 <tr><td>+ 3 ticks (0.03)</td><td class="pos">+$141,455</td><td class="neg">$-60,429</td></tr>
 </tbody></table></div>
 <div class="grid cards" style="margin-top:16px">
@@ -184,7 +185,7 @@ footer{border-top:1px solid var(--line);margin-top:40px;padding:18px 0 calc(24px
 <div class="card"><h3>แหล่งพยากรณ์</h3><div class="kpi">11</div><div class="sub">รวมแบบ median_after_per_model_bias (หัก bias ต่อโมเดลก่อน)</div>
 <div class="sub" style="margin-top:8px">ecmwf_ifs025, gfs_seamless, icon_seamless, gem_seamless, meteofrance_seamless, jma_seamless, ukmo_seamless, ecmwf_aifs025_single, best_match, ncep_nbm_conus, ncep_hrrr_conus</div></div>
 <div class="card"><h3>ความแม่นที่วัดได้</h3><div class="kpi">σ 1.219°C</div><div class="sub">MAE 0.856°C · σ 0.996°F · MAE 0.773°F</div><div class="sub">ใช้ป้อนการแจกแจงความน่าจะเป็นต่อ bin</div></div>
-<div class="card"><h3>จักรวาลที่ใช้จริง</h3><div class="kpi">33 เมือง</div><div class="sub">เกณฑ์: obs ตกใน bin ที่ตลาดตัดสิน ≥ 90% (จากข้อมูลจริง · อัปเดต <time datetime="2026-09-30T18:05:01Z">2026-09-30</time>)</div></div>
+<div class="card"><h3>จักรวาลที่ใช้จริง</h3><div class="kpi">33 เมือง</div><div class="sub">เกณฑ์: obs ตกใน bin ที่ตลาดตัดสิน ≥ 90% (จากข้อมูลจริง · อัปเดต <time datetime="2026-10-01T16:15:00Z">2026-10-01</time>)</div></div>
 </div>
 <h3 style="margin-top:16px">agreement รายเมือง (ยิ่งสูง = obs ของเราตรงกับแหล่งตัดสินของตลาด)</h3>
 <ul class="chips" aria-label="เมืองที่ใช้และค่า agreement">
@@ -282,7 +283,7 @@ footer{border-top:1px solid var(--line);margin-top:40px;padding:18px 0 calc(24px
 <section id="pipeline" aria-labelledby="plH"><h2 id="plH">รอบงานอัตโนมัติ</h2><div class="tblwrap"><table><caption>ตารางที่ตั้งไว้บน GitHub Actions (UTC) — ทุกอย่าง commit กลับเข้า repo เอง</caption><thead><tr><th scope="col">เวลา</th><th scope="col">ทำอะไร</th><th scope="col">ได้อะไร</th></tr></thead><tbody><tr><td>ทุก 30 นาที (:00, :30 UTC)</td><td>เช็คว่ามีเมืองถึงเวลาตัดสินใจไหม → สแกนเฉพาะเมืองนั้น</td><td>bid/ask + depth + obs + σ + snapshot</td></tr><tr><td>ทุกวัน 03:20 UTC</td><td>อัปเดตจักรวาล · วัดช่องว่าง bid/ask · เติมเฉลย</td><td>hit rate/EV/Brier จริง + รายงาน</td></tr><tr><td>ทุกครั้งที่ push</td><td>รันชุดทดสอบ 20 ข้อ</td><td>กันโค้ดพังเงียบ ๆ</td></tr></tbody></table></div>
 <p class="sub">นาที CI ที่ใช้ ~1,400–1,700/เดือน — อยู่ในโควตาฟรีของ repo ส่วนตัว (2,000 นาที)</p>
 </section>
-</main><footer><p>หน้านี้สร้างอัตโนมัติจาก <code>build_monitor.py</code> · โหมด full · สร้างเมื่อ <time datetime="2026-09-30T18:05:06Z">2026-09-30T18:05:06Z</time></p><p>ตัวเลขทั้งหมดคำนวณสดจาก data/ ในขณะสร้าง (ไม่ใส่ค่าคงที่) · backtest ใช้ราคาซื้อขายล่าสุดจากประวัติตลาด · ผลจริงจะมาจาก forward-test เท่านั้น</p><p>ไม่ใช่คำแนะนำการลงทุน · ตลาดพยากรณ์อากาศมีความเสี่ยงสภาพคล่อง/การตัดสิน · ตรวจ ToS และภูมิภาคก่อนใช้เงินจริง</p></footer></div>
+</main><footer><p>หน้านี้สร้างอัตโนมัติจาก <code>build_monitor.py</code> · โหมด full · สร้างเมื่อ <time datetime="2026-10-01T16:15:11Z">2026-10-01T16:15:11Z</time></p><p>ตัวเลขทั้งหมดคำนวณสดจาก data/ ในขณะสร้าง (ไม่ใส่ค่าคงที่) · backtest ใช้ราคาซื้อขายล่าสุดจากประวัติตลาด · ผลจริงจะมาจาก forward-test เท่านั้น</p><p>ไม่ใช่คำแนะนำการลงทุน · ตลาดพยากรณ์อากาศมีความเสี่ยงสภาพคล่อง/การตัดสิน · ตรวจ ToS และภูมิภาคก่อนใช้เงินจริง</p></footer></div>
 <script>
 (function(){
  try{
