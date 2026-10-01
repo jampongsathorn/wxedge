@@ -1063,3 +1063,30 @@ GITHUB_TOKEN=... python3 relay.py post --from arena-wxedge --to <id> \
 
 **ข้อจำกัดที่มีจริง:** arena-wxedge ไม่มี daemon — ตอบกลับได้เฉพาะตอนผู้ใช้ทัก (ตื่น)
 อีกฝั่งเขียนไว้ก่อนได้เสมอ; ถ้าต้องการ auto 24/7 ต้องใช้ทาง D (Actions + LLM API key ยังไม่ได้ทำ)
+
+## 33. ⛔ บทเรียนวิกฤต: `?asset_id=` เพิกเฉย → fills 80,000 แถวปน global feed (1 ต.ค. 2026)
+
+**พบระหว่างวิเคราะห์ข้อมูล** (`analyze.py`): ดีลของ bin เดียวมีหลายราคาในวินาทีเดียวกัน (0.04 → 0.98)
+ทั้งที่สมุดจริงตอนนั้นมีแค่ 0.994–0.999 → ตรวจจนถึงต้นตอ:
+
+| ทดสอบสด | ผล |
+|---|---|
+| `trades?asset_id=NOT_A_REAL_TOKEN` | **ได้ 5 rows** → param นี้ไม่กรองอะไรเลย |
+| `trades?asset_id=<token จริง>` | 28 asset อื่นปน (ตลาด Bitcoin Up/Down!) · token เราก็ไม่มี |
+| `trades?market=<conditionId>` (ทางที่ถูก) | เฉพาะตลาดนั้น · 2 asset (YES+NO) · ราคา 0.98–0.99 ถูกต้อง |
+
+**ผลกระทบ:** `data/trades_live.jsonl` ทั้ง 80,000 แถว (26 ก.ย.–1 ต.ค.) = global feed ที่แปะ label ผิด
+→ **ถอนทิ้งทั้งไฟล์** · สถิติทุกอย่างที่เคยอิงไฟล์นี้ (trade-replay ใน execution_report · ส่วน A ของ
+data_analysis) **โมฆะ** — สมมติฐาน "event cluster = negRisk conversion" ที่เคยสันนิษฐานไว้ **ถอนคำพูด**
+(ต้นเหตุจริงคือ feed ปน ไม่ใช่กลไกตลาด) · ส่วน depth_live/snapshots ไม่กระทบ ·
+`exec_backtest`/`market_replay` ไม่กระทบ (ใช้ `market=<cond>` ตั้งแต่แรก — โชคดีที่รอด)
+
+**แก้ถาวร:**
+1. `trades_probe.py` ใช้ `?market=<conditionId>` + กรอง `asset == YES token` (`keep_token_rows`)
+2. ทุกแถวใหม่มี **provenance**: `src="market"` · `asset` · `cond` → ตรวจย้อนได้
+3. **anomaly counter**: ถ้าได้ดีลที่ไม่ใช่ทั้ง YES/NO ของตลาดนี้ → เตือนทันที (จับ param เพี้ยนในอนาคต)
+4. ผู้บริโภค (analyze/execution_report) **บังคับ provenance** — แถวเก่าที่ตกค้างถูกข้ามอัตโนมัติ
+5. เทสต์กันถอยหลัง **T18a–f** (รวม unit test ของ keep_token_rows)
+
+**กู้ประวัติได้ไหม?** ได้บางส่วน — snapshot เก็บ token ของ bin ที่เราเลือกทุกวัน; conditionId ดึงจาก
+Gamma ได้ (แคชแบบ `market_meta`) → ถ้าต้องการ fills ที่ถูกต้องของอดีต ต้องรัน rebuild (ยังไม่ทำ)

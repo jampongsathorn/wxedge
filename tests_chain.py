@@ -394,6 +394,26 @@ _cl = open(os.path.join(ROOT, "cheap_live.py"), encoding="utf-8").read()
 check("T12f snapshot เก็บ token_id (ธาตุที่ 6)", 'b.get("token_id")' in _cl)
 
 print()
+print("T18 · บทเรียน 1 ต.ค. — data-api asset_id= เพิกเฉย → ใช้ market=<cond> + provenance")
+_tp18 = open(os.path.join(ROOT, "trades_probe.py"), encoding="utf-8").read()
+check("T18a trades_probe สร้าง URL ด้วย market= เท่านั้น (ไม่เหลือ asset_id=%s ในโค้ด)",
+      "?market=%s" in _tp18 and "asset_id=%s" not in _tp18)
+_kept18, _other18, _weird18 = TP12.keep_token_rows(
+    [{"asset": "AAA", "price": 1}, {"asset": "BBB", "price": 2}, {"asset": "ZZZ", "price": 3}],
+    "AAA", "BBB")
+check("T18b กรองเหลือ YES + แยก NO(n_other) + ต่างดาว(n_weird) ถูกต้อง",
+      len(_kept18) == 1 and _kept18[0]["price"] == 1 and _other18 == 1 and _weird18 == 1)
+_k0, _o0, _w0 = TP12.keep_token_rows([{"asset": "X"}], "AAA", "BBB")
+check("T18c ได้เฉพาะ asset ต่างดาว → kept ว่าง + weird=1 (จับ param เพี้ยนได้)",
+      not _k0 and _o0 == 0 and _w0 == 1)
+check("T18d แถวใหม่มี provenance (src=market + asset + cond)",
+      'src="market"' in _tp18 and '"asset"' in _tp18 and '"cond"' in _tp18)
+_er18 = open(os.path.join(ROOT, "execution_report.py"), encoding="utf-8").read()
+check("T18e execution_report ข้ามดีลรูปแบบเก่า (ไม่มี provenance)", 't.get("asset")' in _er18)
+_an18 = open(os.path.join(ROOT, "analyze.py"), encoding="utf-8").read()
+check("T18f analyze ข้ามดีลเก่าเช่นกัน (บังคับ provenance)", 't.get("asset") and t.get("cond")' in _an18)
+
+print()
 print("T13 · depth_probe — L2 ladder + slippage")
 import depth_probe as DP13
 from trades_probe import in_window as _iw
