@@ -1,20 +1,20 @@
 # execution_report — PnL 4 แบบ เทียบกัน (หลักฐานระดับ execution)
 
-อัปเดต 2026-10-01 16:19Z · ไม้ใน log 2 · stake $12 · หน้าต่าง 20 นาที
+อัปเดต 2026-10-03 03:20Z · ไม้ใน log 2 · stake $12 · หน้าต่าง 20 นาที
 
 | แบบ | ไม้ | ชนะ | hit | PnL รวม (ที่ stake นี้) |
 |---|---|---|---|---|
 | 1) last-trade (วิธีเก่า) | 2 | 0 | 0.0% | $-24.00 |
 | 2) best-ask ณ ตอนเข้า | 2 | 0 | 0.0% | $-24.00 |
 | 3) trade-replay (ดีลจริงสะสม) | 0 | 0 | — | — |
-| 4) ladder-VWAP (slippage) | 0 | 0 | — | — |
+| 4) ladder-VWAP (slippage) | 1 | 0 | 0.0% | $-12.00 |
 
 **รายไม้**
 
 | เมือง | bin | ผล | last | ask (แหล่ง) | trade-replay | ดีล | ladder-VWAP | slippage |
 |---|---|---|---|---|---|---|---|---|
 | dallas | 88-89°F | แพ้ | 0.005 | 0.010 (CLOB book) | no-fill | 0 | — | — |
-| panama-city | 29°C | แพ้ | 0.020 | 0.040 (CLOB book) | no-fill | 0 | — | — |
+| panama-city | 29°C | แพ้ | 0.020 | 0.040 (CLOB book) | no-fill | 0 | 0.9750 | +0.9350 |
 
 **ที่มา**: last = `yes_last` (CLOB prices-history) · ask = `book_best_ask`/`yes_ask` (Gamma) · trade-replay = ดีลจริงใน `trades_live.jsonl` (exec_price) · ladder-VWAP = `depth_live.jsonl`
 
