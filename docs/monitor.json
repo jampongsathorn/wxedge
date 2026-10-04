@@ -1,5 +1,5 @@
 {
- "built_at": "2026-10-04T03:15:03Z",
+ "built_at": "2026-10-04T03:20:41Z",
  "mode": "full",
  "backtest": {
   "n": 379,
@@ -13,16 +13,16 @@
   "n": 2,
   "resolved": 2,
   "hit": 0.0,
-  "snap_city_days": 8605
+  "snap_city_days": 8606
  },
  "spread": {
   "n": 90,
   "bins": 90,
-  "measured_at": "2026-10-03T03:20:48.302726Z",
-  "ask_last": 0.0095,
-  "last_bid": 0.009999999999999898,
-  "spread": 0.02,
-  "settled": 11
+  "measured_at": "2026-10-04T03:20:36.653177Z",
+  "ask_last": 0.0050000000000000044,
+  "last_bid": 0.0050000000000000044,
+  "spread": 0.013,
+  "settled": 9
  },
  "gates": [
   {
@@ -35,7 +35,7 @@
    "n": 2,
    "title": "หลักฐาน bid/ask จริง",
    "status": "progress",
-   "value": "วัดได้ 90 bins (ask−last median 0.0095)"
+   "value": "วัดได้ 90 bins (ask−last median 0.0050)"
   },
   {
    "n": 3,
