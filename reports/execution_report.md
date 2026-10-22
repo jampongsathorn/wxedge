@@ -1,13 +1,13 @@
 # execution_report — PnL 4 แบบ เทียบกัน (หลักฐานระดับ execution)
 
-อัปเดต 2026-10-21 03:20Z · ไม้ใน log 14 · stake $12 · หน้าต่าง 20 นาที
+อัปเดต 2026-10-22 03:20Z · ไม้ใน log 19 · stake $12 · หน้าต่าง 20 นาที
 
 | แบบ | ไม้ | ชนะ | hit | PnL รวม (ที่ stake นี้) |
 |---|---|---|---|---|
-| 1) last-trade (วิธีเก่า) | 14 | 3 | 21.4% | $+11865.37 |
-| 2) best-ask ณ ตอนเข้า | 14 | 3 | 21.4% | $+11861.77 |
+| 1) last-trade (วิธีเก่า) | 19 | 3 | 15.8% | $+11805.37 |
+| 2) best-ask ณ ตอนเข้า | 19 | 3 | 15.8% | $+11801.77 |
 | 3) trade-replay (ดีลจริงสะสม) | 9 | 2 | 22.2% | $-76.30 |
-| 4) ladder-VWAP (slippage) | 14 | 3 | 21.4% | $+365.67 |
+| 4) ladder-VWAP (slippage) | 19 | 3 | 15.8% | $+305.67 |
 
 **รายไม้**
 
@@ -27,6 +27,11 @@
 | lucknow | 32°C | แพ้ | 0.946 | 0.979 (CLOB book) | 0.967 | 2 | 0.1689 | -0.8101 |
 | istanbul | 13°C or below | แพ้ | 0.605 | 0.659 (CLOB book) | no-fill | 0 | 0.3020 | -0.3570 |
 | istanbul | 13°C or below | แพ้ | 0.621 | 0.640 (CLOB book) | no-fill | 0 | 0.3020 | -0.3380 |
+| istanbul | 15°C or below | แพ้ | 0.542 | 0.564 (CLOB book) | no-fill | 0 | 0.6880 | +0.1240 |
+| istanbul | 15°C or below | แพ้ | 0.523 | 0.529 (CLOB book) | no-fill | 0 | 0.6880 | +0.1590 |
+| istanbul | 15°C or below | แพ้ | 0.560 | 0.599 (CLOB book) | no-fill | 0 | 0.6880 | +0.0890 |
+| istanbul | 15°C or below | แพ้ | 0.606 | 0.687 (CLOB book) | no-fill | 0 | 0.6880 | +0.0010 |
+| istanbul | 15°C or below | แพ้ | 0.609 | 0.695 (CLOB book) | no-fill | 0 | 0.6880 | -0.0070 |
 
 **ที่มา**: last = `yes_last` (CLOB prices-history) · ask = `book_best_ask`/`yes_ask` (Gamma) · trade-replay = ดีลจริงใน `trades_live.jsonl` (exec_price) · ladder-VWAP = `depth_live.jsonl`
 
