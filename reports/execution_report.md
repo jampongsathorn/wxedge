@@ -1,13 +1,13 @@
 # execution_report — PnL 4 แบบ เทียบกัน (หลักฐานระดับ execution)
 
-อัปเดต 2026-10-24 03:20Z · ไม้ใน log 24 · stake $12 · หน้าต่าง 20 นาที
+อัปเดต 2026-10-26 03:20Z · ไม้ใน log 24 · stake $12 · หน้าต่าง 20 นาที
 
 | แบบ | ไม้ | ชนะ | hit | PnL รวม (ที่ stake นี้) |
 |---|---|---|---|---|
-| 1) last-trade (วิธีเก่า) | 24 | 8 | 33.3% | $+11851.39 |
-| 2) best-ask ณ ตอนเข้า | 24 | 8 | 33.3% | $+11840.50 |
-| 3) trade-replay (ดีลจริงสะสม) | 10 | 2 | 20.0% | $-88.30 |
-| 4) ladder-VWAP (slippage) | 24 | 8 | 33.3% | $+332.88 |
+| 1) last-trade (วิธีเก่า) | 24 | 13 | 54.2% | $+12203.24 |
+| 2) best-ask ณ ตอนเข้า | 24 | 13 | 54.2% | $+12132.17 |
+| 3) trade-replay (ดีลจริงสะสม) | 10 | 3 | 30.0% | $-51.93 |
+| 4) ladder-VWAP (slippage) | 24 | 13 | 54.2% | $+434.19 |
 
 **รายไม้**
 
@@ -32,11 +32,11 @@
 | istanbul | 15°C or below | ชนะ | 0.560 | 0.599 (CLOB book) | no-fill | 0 | 0.6880 | +0.0890 |
 | istanbul | 15°C or below | ชนะ | 0.606 | 0.687 (CLOB book) | no-fill | 0 | 0.6880 | +0.0010 |
 | istanbul | 15°C or below | ชนะ | 0.609 | 0.695 (CLOB book) | no-fill | 0 | 0.6880 | -0.0070 |
-| istanbul | 15°C or below | แพ้ | 0.684 | 0.768 (CLOB book) | no-fill | 0 | 0.7390 | -0.0290 |
-| istanbul | 15°C or below | แพ้ | 0.624 | 0.713 (CLOB book) | no-fill | 0 | 0.7390 | +0.0260 |
-| istanbul | 15°C or below | แพ้ | 0.702 | 0.739 (CLOB book) | no-fill | 0 | 0.7390 | +0.0000 |
-| istanbul | 24°C | แพ้ | 0.042 | 0.052 (CLOB book) | 0.330 | 2 | 0.3300 | +0.2780 |
-| istanbul | 15°C or below | แพ้ | 0.978 | 0.983 (CLOB book) | no-fill | 0 | 0.7390 | -0.2440 |
+| istanbul | 15°C or below | ชนะ | 0.684 | 0.768 (CLOB book) | no-fill | 0 | 0.7390 | -0.0290 |
+| istanbul | 15°C or below | ชนะ | 0.624 | 0.713 (CLOB book) | no-fill | 0 | 0.7390 | +0.0260 |
+| istanbul | 15°C or below | ชนะ | 0.702 | 0.739 (CLOB book) | no-fill | 0 | 0.7390 | +0.0000 |
+| istanbul | 24°C | ชนะ | 0.042 | 0.052 (CLOB book) | 0.330 | 2 | 0.3300 | +0.2780 |
+| istanbul | 15°C or below | ชนะ | 0.978 | 0.983 (CLOB book) | no-fill | 0 | 0.7390 | -0.2440 |
 
 **ที่มา**: last = `yes_last` (CLOB prices-history) · ask = `book_best_ask`/`yes_ask` (Gamma) · trade-replay = ดีลจริงใน `trades_live.jsonl` (exec_price) · ladder-VWAP = `depth_live.jsonl`
 
