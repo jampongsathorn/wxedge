@@ -1,13 +1,13 @@
 # execution_report — PnL 4 แบบ เทียบกัน (หลักฐานระดับ execution)
 
-อัปเดต 2026-10-29 03:20Z · ไม้ใน log 33 · stake $12 · หน้าต่าง 20 นาที
+อัปเดต 2026-10-30 03:20Z · ไม้ใน log 34 · stake $12 · หน้าต่าง 20 นาที
 
 | แบบ | ไม้ | ชนะ | hit | PnL รวม (ที่ stake นี้) |
 |---|---|---|---|---|
-| 1) last-trade (วิธีเก่า) | 33 | 13 | 39.4% | $+12095.24 |
-| 2) best-ask ณ ตอนเข้า | 33 | 13 | 39.4% | $+12024.17 |
-| 3) trade-replay (ดีลจริงสะสม) | 17 | 3 | 17.6% | $-135.93 |
-| 4) ladder-VWAP (slippage) | 33 | 13 | 39.4% | $+326.19 |
+| 1) last-trade (วิธีเก่า) | 34 | 13 | 38.2% | $+12083.24 |
+| 2) best-ask ณ ตอนเข้า | 34 | 13 | 38.2% | $+12012.17 |
+| 3) trade-replay (ดีลจริงสะสม) | 18 | 3 | 16.7% | $-147.93 |
+| 4) ladder-VWAP (slippage) | 34 | 13 | 38.2% | $+314.19 |
 
 **รายไม้**
 
@@ -46,6 +46,7 @@
 | denver | 66-67°F | แพ้ | 0.842 | 0.988 (CLOB book) | 0.990 | 1 | 0.9797 | -0.0083 |
 | denver | 66-67°F | แพ้ | 0.944 | 0.997 (CLOB book) | 0.990 | 1 | 0.9797 | -0.0173 |
 | denver | 68-69°F | แพ้ | 0.021 | 0.035 (CLOB book) | no-fill | 0 | 0.1015 | +0.0665 |
+| denver | 64-65°F | แพ้ | 0.500 | 0.520 (CLOB book) | 0.874 | 3 | 0.0127 | -0.5073 |
 
 **ที่มา**: last = `yes_last` (CLOB prices-history) · ask = `book_best_ask`/`yes_ask` (Gamma) · trade-replay = ดีลจริงใน `trades_live.jsonl` (exec_price) · ladder-VWAP = `depth_live.jsonl`
 
